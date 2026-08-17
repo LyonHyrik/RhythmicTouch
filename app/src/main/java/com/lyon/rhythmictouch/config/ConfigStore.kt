@@ -1,0 +1,30 @@
+package com.lyon.rhythmictouch.config
+
+import android.content.Context
+import com.lyon.rhythmictouch.RhythmicConstants
+
+class ConfigStore(context: Context) {
+    private val prefs = context.getSharedPreferences(RhythmicConstants.PREF_NAME, Context.MODE_PRIVATE)
+
+    fun read(): RhythmicConfig = RhythmicConfig(
+        enabled = prefs.getBoolean(RhythmicConstants.KEY_ENABLED, RhythmicConstants.DEFAULT_ENABLED),
+        intensity = prefs.getInt(RhythmicConstants.KEY_INTENSITY, RhythmicConstants.DEFAULT_INTENSITY).coerceIn(0, 100),
+        whitelistMode = prefs.getBoolean(RhythmicConstants.KEY_WHITELIST_MODE, RhythmicConstants.DEFAULT_WHITELIST_MODE),
+        excludedApps = prefs.getStringSet(RhythmicConstants.KEY_EXCLUDED_APPS, emptySet()) ?: emptySet(),
+        logMode = prefs.getInt(RhythmicConstants.KEY_LOG_MODE, RhythmicConstants.DEFAULT_LOG_MODE).coerceIn(0, 2),
+        monet = prefs.getBoolean(RhythmicConstants.KEY_MONET, RhythmicConstants.DEFAULT_MONET),
+        vibrationDelay = prefs.getInt(RhythmicConstants.KEY_VIBRATION_DELAY, RhythmicConstants.DEFAULT_VIBRATION_DELAY).coerceIn(0, 1000),
+    )
+
+    fun write(config: RhythmicConfig) {
+        prefs.edit()
+            .putBoolean(RhythmicConstants.KEY_ENABLED, config.enabled)
+            .putInt(RhythmicConstants.KEY_INTENSITY, config.intensity)
+            .putBoolean(RhythmicConstants.KEY_WHITELIST_MODE, config.whitelistMode)
+            .putStringSet(RhythmicConstants.KEY_EXCLUDED_APPS, config.excludedApps)
+            .putInt(RhythmicConstants.KEY_LOG_MODE, config.logMode)
+            .putBoolean(RhythmicConstants.KEY_MONET, config.monet)
+            .putInt(RhythmicConstants.KEY_VIBRATION_DELAY, config.vibrationDelay)
+            .apply()
+    }
+}
