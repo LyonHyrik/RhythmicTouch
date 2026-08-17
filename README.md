@@ -63,6 +63,14 @@
 - 🔧 [LSPosed](https://github.com/LSPosed/LSPosed) / EdXposed
 - ✅ `com.android.systemui` 作用域已勾选
 
+## 📱 支持设备与系统
+
+| 📱 设备 | 🤖 系统版本 | 📝 状态 |
+|---------|-----------|---------|
+| OPPO Reno8 Pro | ColorOS 14.0 | ✅ 已验证 |
+
+> 💡 欢迎提交新设备测试结果！其他机型请自测。
+
 ## 📥 安装
 
 1. ⬇️ 从 [Releases](https://github.com/LyonHyrik/RhythmicTouch/releases) 下载 APK
