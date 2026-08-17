@@ -7,5 +7,4 @@
 /captures
 .externalNativeBuild
 .cxx
-local-maven
 /app/build
