@@ -1,10 +1,13 @@
 package com.lyon.rhythmictouch
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.lyon.rhythmictouch.config.ConfigStore
 import com.lyon.rhythmictouch.systemui.AAudioInterceptor
 import com.lyon.rhythmictouch.systemui.NativeAudioInterceptor
 import com.lyon.rhythmictouch.systemui.OboeBridge
@@ -26,13 +29,15 @@ class MainHook : IXposedHookLoadPackage {
             RhythmicConstants.SYSTEMUI_PACKAGE -> {
                 XposedBridge.log("[RhythmicTouch] ✅ Injected into SystemUI, scheduling engine start")
                 try {
+                    SystemUiHaptics.setAaudioInterceptor(aaudioInterceptor)
+                    SystemUiHaptics.setNativeInterceptor(nativeInterceptor)
                     scheduleStart()
                     
                     Handler(Looper.getMainLooper()).postDelayed({
                         try {
                             XposedBridge.log("[RhythmicTouch] 🎵🔧 Installing NATIVE AudioTrack hooks in SystemUI...")
                             
-                            val nativeInterceptor = NativeAudioInterceptor.getInstance()
+                            nativeInterceptor.setAppContext(currentApplication())
                             val nativeResult = nativeInterceptor.interceptSystemLevel(lpparam)
                             
                             if (nativeResult) {
@@ -43,6 +48,16 @@ class MainHook : IXposedHookLoadPackage {
                             
                             val aaudioResult = aaudioInterceptor.interceptSystemLevel(lpparam)
                             XposedBridge.log("[RhythmicTouch] 🎵 SystemUI AAudio intercept: $aaudioResult")
+                            
+                            try {
+                                val ctx = currentApplication()?.applicationContext
+                                if (ctx != null) {
+                                    val config = ConfigStore(ctx).read()
+                                    aaudioInterceptor.updateInterval(config.aaudioIntervalMs.toLong())
+                                    nativeInterceptor.setSyncEnabled(config.syncAaudioWithAudioTrack)
+                                    XposedBridge.log("[RhythmicTouch] 📊 Initial config applied: interval=${config.aaudioIntervalMs}ms, sync=${config.syncAaudioWithAudioTrack}")
+                                }
+                            } catch (_: Throwable) {}
                             
                         } catch (t: Throwable) {
                             XposedBridge.log("[RhythmicTouch] ❌ SystemUI init failed: $t")
@@ -62,48 +77,100 @@ class MainHook : IXposedHookLoadPackage {
                         try {
                             XposedBridge.log("[RhythmicTouch] 🔧 Installing OboePcmCapture (C++ GOT Hook) for Phira...")
                             
-                            // PRIMARY: Use OboeBridge (C++ native layer) for true AAudio/Oboe capture
                             val oboeBridge = OboeBridge()
                             
-                            // Get Android Vibrator service for direct vibration control
                             val vibrator = try {
                                 val smClass = Class.forName("android.os.ServiceManager")
                                 val method = smClass.getMethod("getService", String::class.java)
                                 method.invoke(null, "vibrator")
                             } catch (e: Exception) { null }
+
+                            var sendIntervalMs = 100L
+
+                            try {
+                                val app = Class.forName("android.app.ActivityThread")
+                                    .getMethod("currentApplication")
+                                    .invoke(null) as Context
+                                val config = ConfigStore(app.applicationContext).read()
+                                sendIntervalMs = config.aaudioIntervalMs.toLong()
+                                oboeBridge.updateInterval(sendIntervalMs)
+                                XposedBridge.log("[RhythmicTouch-Phira] 📊 Loaded config: aaudioIntervalMs=$sendIntervalMs, syncWithAudioTrack=${config.syncAaudioWithAudioTrack}")
+
+                                val filter = IntentFilter().apply {
+                                    addAction(RhythmicConstants.ACTION_REFRESH_CONFIG)
+                                    addAction(RhythmicConstants.ACTION_SYNC_AAUDIO_INTERVAL)
+                                }
+                                val configReceiver = object : BroadcastReceiver() {
+                                    override fun onReceive(context: Context?, intent: Intent?) {
+                                        when (intent?.action) {
+                                            RhythmicConstants.ACTION_REFRESH_CONFIG -> {
+                                                val interval = intent.getIntExtra(RhythmicConstants.EXTRA_AAUDIO_INTERVAL_MS, -1)
+                                                val syncMode = intent.getBooleanExtra(RhythmicConstants.EXTRA_SYNC_ENABLED, false)
+                                                if (interval >= 0) {
+                                                    if (!syncMode) {
+                                                        sendIntervalMs = interval.toLong()
+                                                        oboeBridge.updateInterval(sendIntervalMs)
+                                                        XposedBridge.log("[RhythmicTouch-Phira] 📊 Manual interval updated: ${sendIntervalMs}ms")
+                                                    } else {
+                                                        try {
+                                                            app.applicationContext.sendBroadcast(Intent(RhythmicConstants.ACTION_REQUEST_DETECTED_INTERVAL))
+                                                            XposedBridge.log("[RhythmicTouch-Phira] 📡 Requesting detected AudioTrack interval...")
+                                                        } catch (_: Exception) {}
+                                                    }
+                                                } else {
+                                                    val config = ConfigStore(app.applicationContext).read()
+                                                    sendIntervalMs = config.aaudioIntervalMs.toLong()
+                                                    oboeBridge.updateInterval(sendIntervalMs)
+                                                    XposedBridge.log("[RhythmicTouch-Phira] 📊 Config refreshed (fallback): ${sendIntervalMs}ms")
+                                                }
+                                            }
+                                            RhythmicConstants.ACTION_SYNC_AAUDIO_INTERVAL -> {
+                                                val interval = intent.getIntExtra(RhythmicConstants.EXTRA_AAUDIO_INTERVAL_MS, 0)
+                                                if (interval > 0) {
+                                                    sendIntervalMs = interval.toLong()
+                                                    oboeBridge.updateInterval(sendIntervalMs)
+                                                    XposedBridge.log("[RhythmicTouch-Phira] 📡 Interval synced: ${sendIntervalMs}ms")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                    app.applicationContext.registerReceiver(configReceiver, filter, Context.RECEIVER_EXPORTED)
+                                } else {
+                                    @Suppress("DEPRECATION")
+                                    app.applicationContext.registerReceiver(configReceiver, filter)
+                                }
+                            } catch (ctxEx: Exception) {
+                                XposedBridge.log("[RhythmicTouch-Phira] ⚠️ Config init failed: ${ctxEx.message}")
+                            }
                             
                             oboeBridge.fftListener = object : (ByteArray, Int) -> Unit {
                                 var lastSendTimeMs = 0L
-                                val SEND_INTERVAL_MS = 33L  // Match SystemUI's 33ms Visualizer capture period for perfect sync!
                                 
                                 override fun invoke(fft: ByteArray, rate: Int) {
                                     try {
                                         if (fft.isEmpty()) return
                                         
-                                        // Calculate average audio level for logging
                                         val avgLevel = fft.map { it.toInt() and 0xFF }.average()
                                         val maxLevel = fft.maxOf { it.toInt() and 0xFF }
                                         
-                                        // Log every 100th frame to avoid spam
                                         if (oboeBridge.frameCount % 100L == 0L) {
                                             XposedBridge.log("[RhythmicTouch-Phira-Oboe] 🎵🔥 FFT: ${fft.size} bins, avg=$avgLevel, max=$maxLevel")
                                         }
                                         
-                                        // Rate limiting: match the global Visualizer's 33ms cadence to keep SystemUI in sync!
                                         val nowMs = System.currentTimeMillis()
-                                        if (nowMs - lastSendTimeMs < SEND_INTERVAL_MS) return
+                                        if (nowMs - lastSendTimeMs < sendIntervalMs) return
                                         lastSendTimeMs = nowMs
                                         
-                                        // Send FFT data to SystemUI via Broadcast IPC!
                                         try {
                                             val intent = Intent("com.lyon.rhythmictouch.ACTION_PHIRA_FFT_DATA").apply {
                                                 putExtra("fft_data", fft)
                                                 putExtra("sampling_rate", rate)
                                                 putExtra("source_app", "org.flos.phira")
-                                                setPackage("com.android.systemui")  // Target SystemUI specifically!
+                                                setPackage("com.android.systemui")
                                             }
                                             
-                                            // Use reflection to get application context (ActivityThread is hidden API)
                                             try {
                                                 val app = Class.forName("android.app.ActivityThread")
                                                     .getMethod("currentApplication")
@@ -139,7 +206,6 @@ class MainHook : IXposedHookLoadPackage {
                             } else {
                                 XposedBridge.log("[RhythmicTouch] ⚠️ OboeCapture install failed, trying Kotlin fallback...")
                                 
-                                // FALLBACK: Try pure Kotlin AudioTrack hooks (won't work for AAudio but worth trying)
                                 val phiraNativeHook = NativeAudioInterceptor.getInstance()
                                 phiraNativeHook.setFftListener { fft, rate ->
                                     XposedBridge.log("[RhythmicTouch-Phira-Fallback] 📊 Fallback FFT: size=${fft.size}")

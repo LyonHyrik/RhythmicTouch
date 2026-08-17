@@ -14,6 +14,8 @@ class ConfigStore(context: Context) {
         logMode = prefs.getInt(RhythmicConstants.KEY_LOG_MODE, RhythmicConstants.DEFAULT_LOG_MODE).coerceIn(0, 2),
         monet = prefs.getBoolean(RhythmicConstants.KEY_MONET, RhythmicConstants.DEFAULT_MONET),
         vibrationDelay = prefs.getInt(RhythmicConstants.KEY_VIBRATION_DELAY, RhythmicConstants.DEFAULT_VIBRATION_DELAY).coerceIn(0, 1000),
+        aaudioIntervalMs = prefs.getInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, RhythmicConstants.DEFAULT_AAUDIO_INTERVAL_MS).coerceIn(33, 300),
+        syncAaudioWithAudioTrack = prefs.getBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, RhythmicConstants.DEFAULT_SYNC_AAUDIO_WITH_AUDIOTRACK),
     )
 
     fun write(config: RhythmicConfig) {
@@ -25,6 +27,8 @@ class ConfigStore(context: Context) {
             .putInt(RhythmicConstants.KEY_LOG_MODE, config.logMode)
             .putBoolean(RhythmicConstants.KEY_MONET, config.monet)
             .putInt(RhythmicConstants.KEY_VIBRATION_DELAY, config.vibrationDelay)
+            .putInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, config.aaudioIntervalMs)
+            .putBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, config.syncAaudioWithAudioTrack)
             .apply()
     }
 }

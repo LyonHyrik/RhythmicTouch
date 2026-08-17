@@ -46,6 +46,17 @@ class ConfigProvider : ContentProvider() {
                 val version = prefs?.getInt(RhythmicConstants.KEY_MODULE_VERSION, 0) ?: 0
                 return Bundle().apply { putInt(RhythmicConstants.KEY_MODULE_VERSION, version) }
             }
+            "set_vibrator_calibration" -> {
+                val minMs = extras?.getLong("vibrator_min_ms", 50L) ?: 50L
+                val prefs = context?.getSharedPreferences(RhythmicConstants.PREF_NAME, android.content.Context.MODE_PRIVATE)
+                prefs?.edit()?.putLong("vibrator_cal_min_ms", minMs)?.apply()
+                return Bundle()
+            }
+            "get_vibrator_calibration" -> {
+                val prefs = context?.getSharedPreferences(RhythmicConstants.PREF_NAME, android.content.Context.MODE_PRIVATE)
+                val minMs = prefs?.getLong("vibrator_cal_min_ms", 50L) ?: 50L
+                return Bundle().apply { putLong("vibrator_cal_min_ms", minMs) }
+            }
         }
         return null
     }

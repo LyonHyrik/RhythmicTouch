@@ -12,8 +12,8 @@ android {
         applicationId = "com.lyon.rhythmictouch"
         minSdk = 28
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
     }
 
     buildFeatures {

@@ -22,8 +22,15 @@ class AAudioInterceptor private constructor() {
     @Volatile
     private var lastInterceptMs = 0L
 
+    @Volatile
+    var interceptIntervalMs: Long = 100L
+
     fun setFftListener(listener: ((ByteArray, Int) -> Unit)?) {
         fftListener = listener
+    }
+
+    fun updateInterval(intervalMs: Long) {
+        interceptIntervalMs = intervalMs.coerceIn(33L, 300L)
     }
 
     fun interceptPackage(lpparam: XC_LoadPackage.LoadPackageParam, targetPkg: String): Boolean {
@@ -367,7 +374,7 @@ class AAudioInterceptor private constructor() {
         
         val now = SystemClock.elapsedRealtime()
         
-        if (now - lastInterceptMs < 10L) return
+        if (now - lastInterceptMs < interceptIntervalMs) return
         lastInterceptMs = now
         
         try {

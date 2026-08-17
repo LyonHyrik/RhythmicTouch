@@ -8,11 +8,18 @@ class OboeBridge {
     var fftListener: ((ByteArray, Int) -> Unit)? = null
 
     @Volatile
-    var frameCount = 0L  // Exposed for external access
+    var frameCount = 0L
 
     @Volatile
     var sampleRate = 44100
         private set
+
+    @Volatile
+    var fftIntervalMs: Long = 100L
+
+    fun updateInterval(intervalMs: Long) {
+        fftIntervalMs = intervalMs.coerceIn(33L, 300L)
+    }
 
     init {
         try {
@@ -57,18 +64,21 @@ class OboeBridge {
         frameCount++
         if (nativeRate > 0) sampleRate = nativeRate
 
-        // Append every incoming sample to a rolling buffer so the FFT window is
-        // always a full, contiguous block of the most recent audio (like Visualizer).
+        if (frameCount <= 5 || frameCount % 500L == 0L) {
+            val nonZero = pcmData.count { it.toInt() != 0 }
+            val first5 = pcmData.take(10).toList()
+            XposedBridge.log("[RhythmicTouch-Oboe] 📥 PCM frame#$frameCount: size=${pcmData.size}, nonZero=$nonZero/${pcmData.size}, nativeRate=$nativeRate, first10=$first5")
+        }
+
         for (s in pcmData) {
             ring[ringHead] = s
             ringHead = if (ringHead + 1 >= RING_CAPACITY) 0 else ringHead + 1
             if (ringFill < RING_CAPACITY) ringFill++
         }
 
-        // Throttle to the same cadence as the global Visualizer (33ms).
         val now = SystemClock.elapsedRealtime()
-        if (now - lastFftMs < FFT_INTERVAL_MS) return
         if (ringFill < FFT_SAMPLES * 2) return
+        if (now - lastFftMs < fftIntervalMs) return
         lastFftMs = now
 
         val fft = performFixedFFT()
@@ -99,7 +109,6 @@ class OboeBridge {
     // consumes from the global AudioTrack stream.
     private fun performFixedFFT(): ByteArray? {
         return try {
-            // Mono-sum the latest FFT_SAMPLES stereo frames (same as Visualizer sums L+R).
             val real = FloatArray(FFT_SAMPLES)
             var idx = (ringHead - FFT_SAMPLES * 2 + RING_CAPACITY) % RING_CAPACITY
             for (i in 0 until FFT_SAMPLES) {
@@ -110,6 +119,13 @@ class OboeBridge {
                 idx++
                 if (idx >= RING_CAPACITY) idx = 0
                 real[i] = (l + r) / 65536.0f
+            }
+
+            if (frameCount % 500L == 0L) {
+                val nonZeroInput = real.count { it != 0f }
+                val maxInput = real.maxOrNull() ?: 0f
+                val first5Input = real.take(5).map { "%.6f".format(it) }
+                XposedBridge.log("[RhythmicTouch-Oboe] 🔍 FFT INPUT: ringFill=$ringFill, nonZero=$nonZeroInput/${FFT_SAMPLES}, maxInput=$maxInput, first5=$first5Input")
             }
 
             val imag = FloatArray(FFT_SAMPLES)
@@ -186,7 +202,6 @@ class OboeBridge {
         private const val OUTPUT_BINS = 512
         private const val RING_CAPACITY = 8192
         private const val FFTS_SCALE = 0.25f
-        private const val FFT_INTERVAL_MS = 33L
 
         init {
             try {

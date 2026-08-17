@@ -1,6 +1,14 @@
 package com.lyon.rhythmictouch.ui
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.os.Handler
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +24,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +63,85 @@ fun SettingsScreen(
     val config = remember { mutableStateOf(store.read()) }
     var isRestarting by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
+    var syncedInterval by remember { mutableStateOf<Int?>(null) }
+    var vibratorCalMinMs by remember { mutableStateOf(50L) }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            try {
+                val prefs = context.getSharedPreferences("vibrator_cal", android.content.Context.MODE_PRIVATE)
+                val cached = prefs.getLong("effectiveMinIntervalMs", 0L)
+                if (cached > 0) {
+                    vibratorCalMinMs = cached
+                } else {
+                    val vibrator = context.getSystemService(android.os.Vibrator::class.java)
+                    if (vibrator != null && vibrator.hasVibrator()) {
+                        val testIntervals = longArrayOf(20, 25, 30, 35, 40, 45, 50, 60, 70, 80)
+                        var result = 50L
+                        for (interval in testIntervals) {
+                            val count = 10
+                            val times = mutableListOf<Long>()
+                            val latch = java.util.concurrent.CountDownLatch(count)
+                            val handler = Handler(android.os.Looper.getMainLooper())
+                            for (i in 0 until count) {
+                                handler.postDelayed({
+                                    try { vibrator.vibrate(android.os.VibrationEffect.createOneShot(5, 80)) } catch (_: Exception) {}
+                                    synchronized(times) { times.add(android.os.SystemClock.elapsedRealtime()) }
+                                    latch.countDown()
+                                }, i * interval.toLong())
+                            }
+                            latch.await(3, java.util.concurrent.TimeUnit.SECONDS)
+                            if (times.size < 3) continue
+                            val actual = times.zipWithNext().map { (a, b) -> b - a }
+                            val avg = actual.average().toLong()
+                            val max = actual.maxOrNull() ?: 0L
+                            if (avg <= interval * 1.3 && max <= interval * 2.0) {
+                                result = interval
+                            } else {
+                                break
+                            }
+                            Thread.sleep(100)
+                        }
+                        vibratorCalMinMs = result
+                        prefs.edit().putLong("effectiveMinIntervalMs", result).putLong("timestamp", System.currentTimeMillis()).apply()
+                    }
+                }
+            } catch (_: Throwable) {}
+            if (config.value.aaudioIntervalMs < vibratorCalMinMs.toInt()) {
+                config.value = config.value.copy(aaudioIntervalMs = vibratorCalMinMs.toInt())
+                store.write(config.value)
+            }
+        }
+    }
+
+    DisposableEffect(config.value.syncAaudioWithAudioTrack) {
+        if (config.value.syncAaudioWithAudioTrack) {
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(ctx: Context?, intent: Intent?) {
+                    val interval = intent?.getIntExtra(RhythmicConstants.EXTRA_AAUDIO_INTERVAL_MS, 0) ?: 0
+                    if (interval > 0) {
+                        syncedInterval = interval
+                    }
+                }
+            }
+            val filter = IntentFilter(RhythmicConstants.ACTION_SYNC_AAUDIO_INTERVAL)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+            } else {
+                @Suppress("DEPRECATION")
+                context.registerReceiver(receiver, filter)
+            }
+            context.sendBroadcast(Intent(RhythmicConstants.ACTION_REQUEST_DETECTED_INTERVAL))
+            onDispose {
+                try {
+                    context.unregisterReceiver(receiver)
+                } catch (_: Exception) {}
+            }
+        } else {
+            syncedInterval = null
+            onDispose {}
+        }
+    }
 
     if (showAbout) {
         AboutScreen(
@@ -227,6 +316,90 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            SmallTitle("音频同步")
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "AAudio 发送间隔",
+                            color = MiuixTheme.colorScheme.onSurfaceContainer,
+                        )
+                        Text(
+                            text = if (config.value.syncAaudioWithAudioTrack) {
+                                syncedInterval?.let { "${it}ms (自动)" } ?: "等待检测..."
+                            } else {
+                                "${config.value.aaudioIntervalMs}ms"
+                            },
+                            color = if (config.value.syncAaudioWithAudioTrack) MiuixTheme.colorScheme.onSurfaceContainerVariant else MiuixTheme.colorScheme.primary,
+                        )
+                    }
+                    Text(
+                        text = if (config.value.syncAaudioWithAudioTrack) {
+                            "检测 AudioTrack 数据发送速率并实时应用"
+                        } else {
+                            "设置 AAudio 数据的发送间隔（越小响应越快，但功耗越高）"
+                        },
+                        color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                        fontSize = 12.sp,
+                    )
+                    Slider(
+                        enabled = !config.value.syncAaudioWithAudioTrack,
+                        value = (syncedInterval ?: config.value.aaudioIntervalMs).toFloat(),
+                        onValueChange = { value ->
+                            if (!config.value.syncAaudioWithAudioTrack) {
+                                config.value = config.value.copy(aaudioIntervalMs = value.toInt())
+                                store.write(config.value)
+                            }
+                        },
+                        valueRange = vibratorCalMinMs.toFloat()..300f,
+                        onValueChangeFinished = {
+                            if (!config.value.syncAaudioWithAudioTrack) {
+                                context.sendBroadcast(Intent(RhythmicConstants.ACTION_REFRESH_CONFIG).apply {
+                                    putExtra(RhythmicConstants.EXTRA_AAUDIO_INTERVAL_MS, config.value.aaudioIntervalMs)
+                                    putExtra(RhythmicConstants.EXTRA_SYNC_ENABLED, false)
+                                })
+                                context.sendBroadcast(Intent(RhythmicConstants.ACTION_SYNC_AAUDIO_INTERVAL).apply {
+                                    putExtra(RhythmicConstants.EXTRA_AAUDIO_INTERVAL_MS, config.value.aaudioIntervalMs)
+                                })
+                            }
+                        },
+                    )
+                }
+            }
+
+            SuperSwitch(
+                checked = config.value.syncAaudioWithAudioTrack,
+                onCheckedChange = { checked ->
+                    config.value = config.value.copy(syncAaudioWithAudioTrack = checked)
+                    store.write(config.value)
+                    if (checked) {
+                        syncedInterval = null
+                    }
+                    context.sendBroadcast(Intent(RhythmicConstants.ACTION_REFRESH_CONFIG).apply {
+                        putExtra(RhythmicConstants.EXTRA_AAUDIO_INTERVAL_MS, config.value.aaudioIntervalMs)
+                        putExtra(RhythmicConstants.EXTRA_SYNC_ENABLED, checked)
+                    })
+                    if (!checked) {
+                        context.sendBroadcast(Intent(RhythmicConstants.ACTION_SYNC_AAUDIO_INTERVAL).apply {
+                            putExtra(RhythmicConstants.EXTRA_AAUDIO_INTERVAL_MS, config.value.aaudioIntervalMs)
+                        })
+                    }
+                },
+                title = "自动同步 AudioTrack 速率",
+                summary = "自动检测 AudioTrack 数据发送速率并实时应用到 AAudio",
+            )
 
             SmallTitle("日志")
 

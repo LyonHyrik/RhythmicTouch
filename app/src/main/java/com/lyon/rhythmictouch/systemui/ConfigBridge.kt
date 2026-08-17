@@ -47,6 +47,8 @@ class ConfigBridge(context: Context) {
         profiles = cachePrefs.getStringSet("profiles_json", emptySet())?.mapNotNull { VibrationProfile.fromJson(it) } ?: emptyList(),
         activeProfileId = cachePrefs.getString("active_profile_id", VibrationProfile.DEFAULT_ID) ?: VibrationProfile.DEFAULT_ID,
         deviceConfigs = DeviceVibrationConfig.fromJson(cachePrefs.getString("device_configs_json", null)),
+        aaudioIntervalMs = cachePrefs.getInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, RhythmicConstants.DEFAULT_AAUDIO_INTERVAL_MS).coerceIn(33, 300),
+        syncAaudioWithAudioTrack = cachePrefs.getBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, RhythmicConstants.DEFAULT_SYNC_AAUDIO_WITH_AUDIOTRACK),
     )
 
     private fun writeCache(config: RhythmicConfig) {
@@ -63,6 +65,8 @@ class ConfigBridge(context: Context) {
                 .putStringSet("profiles_json", config.profiles.map { it.toJson() }.toSet())
                 .putString("active_profile_id", config.activeProfileId)
                 .putString("device_configs_json", DeviceVibrationConfig.toJson(config.deviceConfigs))
+                .putInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, config.aaudioIntervalMs)
+                .putBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, config.syncAaudioWithAudioTrack)
                 .apply()
         } catch (_: Throwable) {}
     }

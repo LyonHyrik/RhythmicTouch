@@ -1,11 +1,16 @@
 ﻿package com.lyon.rhythmictouch.systemui
 
+import android.util.Log
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import com.lyon.rhythmictouch.config.VibrationParams
 import java.util.LinkedList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: BeatAnalyzer) {
 
@@ -13,6 +18,7 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
         private const val TAG = "RhythmicVib"
         private const val HISTORY_SIZE = 200
         private const val BASELINE_UPDATE_INTERVAL = 30
+        private const val MIN_VIBRATE_INTERVAL_MS = 50L
     }
 
     private var lastVibrateMs = 0L
@@ -27,6 +33,10 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
     @Volatile
     private var delayMs: Long = 0L
 
+    @Volatile
+    var effectiveMinIntervalMs = MIN_VIBRATE_INTERVAL_MS
+        private set
+
     private val vibrateHandler = Handler(Looper.getMainLooper())
     private val pendingRunnables = mutableSetOf<Runnable>()
 
@@ -38,6 +48,80 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
     fun updateDelayMs(newDelayMs: Long) {
         delayMs = newDelayMs.coerceIn(0L, 1000L)
         RhythmicLog.d(TAG, "⏱️ [DELAY] updated: ${delayMs}ms")
+    }
+
+    fun calibrate(ctx: android.content.Context? = null, onResult: ((Long) -> Unit)? = null) {
+        if (vibrator == null || !vibrator.hasVibrator()) {
+            RhythmicLog.x(TAG, "🎯 calibrate() SKIPPED: vibrator=${vibrator != null}")
+            return
+        }
+        RhythmicLog.x(TAG, "🎯 calibrate() ENTERED")
+        val calThread = HandlerThread("vibrator-calibrate").apply { start() }
+        val calHandler = Handler(calThread.looper)
+        calHandler.post {
+            try {
+                val testIntervals = longArrayOf(20, 25, 30, 35, 40, 45, 50, 60, 70, 80)
+                var result = MIN_VIBRATE_INTERVAL_MS
+                var probesDone = 0
+
+                for (interval in testIntervals) {
+                    val count = 10
+                    val executionTimes = mutableListOf<Long>()
+                    val latch = CountDownLatch(count)
+
+                    for (i in 0 until count) {
+                        vibrateHandler.postDelayed({
+                            try {
+                                vibrator.vibrate(VibrationEffect.createOneShot(5, 80))
+                            } catch (_: Exception) {}
+                            synchronized(executionTimes) { executionTimes.add(SystemClock.elapsedRealtime()) }
+                            latch.countDown()
+                        }, i * interval)
+                    }
+
+                    latch.await(3, TimeUnit.SECONDS)
+                    probesDone++
+                    val size = synchronized(executionTimes) { executionTimes.size }
+
+                    if (size < 3) continue
+
+                    val actualIntervals = synchronized(executionTimes) {
+                        executionTimes.zipWithNext().map { (a, b) -> b - a }
+                    }
+                    val avgActual = actualIntervals.average().toLong()
+                    val maxActual = actualIntervals.maxOrNull() ?: 0L
+
+                    if (avgActual <= interval * 1.3 && maxActual <= interval * 2.0) {
+                        result = interval
+                    } else {
+                        break
+                    }
+
+                    Thread.sleep(100)
+                }
+
+                effectiveMinIntervalMs = result
+                onResult?.invoke(result)
+                if (ctx != null) {
+                    ctx.getSharedPreferences("vibrator_cal", android.content.Context.MODE_PRIVATE)
+                        .edit()
+                        .putLong("effectiveMinIntervalMs", result)
+                        .putInt("probesDone", probesDone)
+                        .putLong("timestamp", System.currentTimeMillis())
+                        .apply()
+                }
+            } catch (e: Throwable) {
+                if (ctx != null) {
+                    ctx.getSharedPreferences("vibrator_cal", android.content.Context.MODE_PRIVATE)
+                        .edit()
+                        .putString("error", e.message)
+                        .putLong("timestamp", System.currentTimeMillis())
+                        .apply()
+                }
+            } finally {
+                calThread.quitSafely()
+            }
+        }
     }
 
     fun testVibration(modeKey: String) {
@@ -331,6 +415,7 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
     }
 
     private fun vibrateOnce(durationMs: Long, amplitude: Float, nowMs: Long) {
+        if (nowMs - lastVibrateMs < effectiveMinIntervalMs) return
         try {
             scheduleVibration(
                 VibrationEffect.createOneShot(

@@ -1,9 +1,13 @@
 package com.lyon.rhythmictouch.systemui
 
+import android.content.Context
+import android.content.Intent
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Build
+import android.os.SystemClock
+import com.lyon.rhythmictouch.RhythmicConstants
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
@@ -20,6 +24,30 @@ class NativeAudioInterceptor private constructor() {
     
     @Volatile
     private var interceptedPackets = 0L
+
+    @Volatile
+    private var lastWriteTimeMs = 0L
+
+    @Volatile
+    private var detectedIntervalMs = 100L
+
+    @Volatile
+    private var syncEnabled = false
+
+    private var appContext: Context? = null
+
+    fun setSyncEnabled(enabled: Boolean) {
+        syncEnabled = enabled
+        if (enabled) {
+            broadcastDetectedInterval()
+        }
+    }
+
+    fun setAppContext(context: Context?) {
+        appContext = context?.applicationContext
+    }
+
+    fun getDetectedIntervalMs(): Long = detectedIntervalMs
     
     private val audioBuffer = java.util.concurrent.ConcurrentLinkedQueue<ByteArray>()
     
@@ -382,8 +410,26 @@ class NativeAudioInterceptor private constructor() {
         }
     }
 
+    @Volatile
+    private var lastBroadcastTimeMs = 0L
+
     private fun processAudioData(buffer: Any, offset: Int, size: Int, source: String) {
         if (size < 64) return
+        
+        val now = SystemClock.elapsedRealtime()
+        if (lastWriteTimeMs > 0L) {
+            val delta = now - lastWriteTimeMs
+            if (delta in 5L..500L) {
+                val smoothed = (detectedIntervalMs * 0.7f + delta * 0.3f).toLong()
+                val changed = kotlin.math.abs(smoothed - detectedIntervalMs) >= 2L
+                detectedIntervalMs = smoothed.coerceIn(33L, 300L)
+                if (syncEnabled && (changed || now - lastBroadcastTimeMs > 500L)) {
+                    broadcastDetectedInterval()
+                    lastBroadcastTimeMs = now
+                }
+            }
+        }
+        lastWriteTimeMs = now
         
         try {
             val byteArray = when (buffer) {
@@ -417,13 +463,12 @@ class NativeAudioInterceptor private constructor() {
                 else -> return
             }
             
-            // Perform FFT and notify listener
             val fft = performFFT(byteArray)
             fft?.let {
                 fftListener?.invoke(it, 44100)
                 
                 if (interceptedPackets % 2000L == 0L) {
-                    log("🎵✨ FFT from $source: ${it.size} bins, level=${it.average()}")
+                    log("🎵✨ FFT from $source: ${it.size} bins, level=${it.average()}, detectedInterval=${detectedIntervalMs}ms")
                 }
             }
             
@@ -432,6 +477,21 @@ class NativeAudioInterceptor private constructor() {
                 log("⚠️ Process error at packet $interceptedPackets: ${t.message}")
             }
         }
+    }
+
+    fun broadcastDetectedInterval() {
+        if (!syncEnabled) return
+        try {
+            val ctx = appContext ?: return
+            val interval = detectedIntervalMs.toInt()
+            val intent = Intent(RhythmicConstants.ACTION_SYNC_AAUDIO_INTERVAL).apply {
+                putExtra(RhythmicConstants.EXTRA_AAUDIO_INTERVAL_MS, interval)
+            }
+            ctx.sendBroadcast(intent)
+            if (interceptedPackets % 50L == 0L) {
+                log("📡 Broadcast detected AudioTrack interval: ${interval}ms")
+            }
+        } catch (_: Throwable) {}
     }
 
     private fun performFFT(pcmData: ByteArray): ByteArray? {

@@ -7,6 +7,7 @@ import android.media.AudioManager
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
+import de.robv.android.xposed.XposedBridge
 import com.lyon.rhythmictouch.LiveState
 import com.lyon.rhythmictouch.RhythmicConstants
 import com.lyon.rhythmictouch.config.DeviceVibrationConfig
@@ -48,9 +49,18 @@ class RhythmicEngine(context: Context) {
 
     @Volatile
     private var lastAttachTryMs = 0L
-    
+
     @Volatile
-    private var frameCount = 0L
+    private var phiraActive = false
+
+    @Volatile
+    private var lastPhiraDataTimeMs = 0L
+
+    @Volatile
+    private var lastGlobalFftTimeMs = 0L
+
+    @Volatile
+    private var detectedGlobalIntervalMs = 100L
 
     fun start() {
         log("engine.start()")
@@ -61,6 +71,18 @@ class RhythmicEngine(context: Context) {
         LiveState.engineActive = cap.startDefault()
         log("capturer started, engineActive=${LiveState.engineActive}, samplingRate=${cap.samplingRate}, captureSize=${cap.captureSize}")
         configBridge.refresh(force = true)
+        driver.calibrate(appContext) { minMs ->
+            try {
+                val bundle = android.os.Bundle().apply { putLong("vibrator_min_ms", minMs) }
+                val result = appContext.contentResolver.call(
+                    android.net.Uri.parse("content://${RhythmicConstants.PROVIDER_AUTHORITY}"),
+                    "set_vibrator_calibration", null, bundle
+                )
+                XposedBridge.log("[RhythmicTouch] 🎯 Calibration result sent to app: minMs=$minMs, providerResult=$result")
+            } catch (e: Throwable) {
+                XposedBridge.log("[RhythmicTouch] ❌ Calibration ContentProvider call failed: ${e.message}")
+            }
+        }
         startSessionWatcher()
     }
 
@@ -68,9 +90,16 @@ class RhythmicEngine(context: Context) {
         statusHandler.post(object : Runnable {
             override fun run() {
                 val e = capturer ?: return
+
+                val now = SystemClock.elapsedRealtime()
+
+                if (phiraActive && now - lastPhiraDataTimeMs > PHIRA_TIMEOUT_MS) {
+                    phiraActive = false
+                    log("Phira timeout (${PHIRA_TIMEOUT_MS}ms), resuming Global Visualizer")
+                }
+
                 activeTracker.refresh()
                 val session = activeTracker.primarySessionId()
-                val now = SystemClock.elapsedRealtime()
                 val needRetry = attachFailed && now - lastAttachTryMs >= ATTACH_RETRY_MS
                 
                 if (session != attachedSession || needRetry) {
@@ -85,22 +114,16 @@ class RhythmicEngine(context: Context) {
                     } else if (session > 0) {
                         attachFailed = !e.attachToSession(session)
                         log("Player session $session: ${if (!attachFailed) "✅" else "❌"}")
-                    } else if (session == -9999) {
-                        log("🎮 Phira AAudio detected, trying Global Visualizer for main screen...")
-                        attachFailed = !e.attachToSession(0)
-                        if (!attachFailed) {
-                            log("✅ Global Visualizer active for Phira (main screen support)")
-                        } else {
-                            log("⚠️ Global Visualizer failed, relying on in-process hook for gameplay")
-                        }
                     }
                     
-                    if (attachFailed && session != -9999) {
+                    if (attachFailed) {
                         log("Attachment FAILED for session=$session! Will retry in ${ATTACH_RETRY_MS}ms")
                     }
                 }
                 
-                e.getFftSnapshot()?.let { onFftData(it, e.samplingRate) }
+                if (!phiraActive) {
+                    e.getFftSnapshot()?.let { onFftData(it, e.samplingRate) }
+                }
                 statusHandler.postDelayed(this, SESSION_WATCH_MS)
             }
         })
@@ -120,12 +143,13 @@ class RhythmicEngine(context: Context) {
         log("setObserving -> $value")
     }
 
-    fun refreshConfig() {
+    fun refreshConfig(): com.lyon.rhythmictouch.config.RhythmicConfig {
         val config = configBridge.refresh(force = true)
         RhythmicLog.mode = config.logMode
         driver.updateParams(config.vibrationParams)
         driver.updateDelayMs(config.vibrationDelay.toLong())
         log("refreshConfig: active profile params applied, heavyLong=${config.vibrationParams.ampOf(com.lyon.rhythmictouch.config.VibrationParams.KEY_HEAVY_LONG)}%/${config.vibrationParams.durOf(com.lyon.rhythmictouch.config.VibrationParams.KEY_HEAVY_LONG)}ms delay=${config.vibrationDelay}ms")
+        return config
     }
 
     private fun getCurrentOutputDeviceAddress(): String {
@@ -163,36 +187,43 @@ class RhythmicEngine(context: Context) {
         statusThread.quitSafely()
     }
 
-    @Volatile
-    private var lastPhiraDataTimeMs = 0L
-    
     fun onExternalFftData(fft: ByteArray, samplingRate: Int) {
+        phiraActive = true
+        lastPhiraDataTimeMs = SystemClock.elapsedRealtime()
         log("📥 onExternalFftData called: size=${fft.size}, rate=$samplingRate")
-        val now = SystemClock.elapsedRealtime()
-        lastPhiraDataTimeMs = now  // Mark Phira as active
-        
         onFftData(fft, samplingRate, isPhira = true)
-        
         log("📤 onExternalFftData completed")
     }
 
     private fun onFftData(fft: ByteArray, samplingRate: Int, isPhira: Boolean = false) {
-        log("🔬 onFftData ENTERED: size=${fft.size}, rate=$samplingRate, source=${if (isPhira) "🎮Phira" else "🌐Global"}, analyzer=${if (analyzer != null) "✅" else "❌ NULL"}")
         val now = SystemClock.elapsedRealtime()
+        
+        if (!isPhira) {
+            val delta = now - lastGlobalFftTimeMs
+            if (delta in 10L..500L) {
+                val smoothed = (detectedGlobalIntervalMs * 0.7f + delta * 0.3f).toLong()
+                if (kotlin.math.abs(smoothed - detectedGlobalIntervalMs) >= 2L) {
+                    detectedGlobalIntervalMs = smoothed.coerceIn(33L, 300L)
+                    val config = configBridge.config
+                    if (config.syncAaudioWithAudioTrack) {
+                        try {
+                            val intent = Intent(RhythmicConstants.ACTION_SYNC_AAUDIO_INTERVAL).apply {
+                                putExtra(RhythmicConstants.EXTRA_AAUDIO_INTERVAL_MS, detectedGlobalIntervalMs.toInt())
+                                setPackage(RhythmicConstants.SYSTEMUI_PACKAGE)
+                            }
+                            appContext.sendBroadcast(intent)
+                            log("📡 Synced interval to Phira: ${detectedGlobalIntervalMs}ms (was ${delta}ms)")
+                        } catch (_: Throwable) {}
+                    }
+                }
+            }
+            lastGlobalFftTimeMs = now
+        }
         
         val result = analyzer?.analyze(fft, samplingRate, now)
         
         if (result == null) {
             log("⚠️ analyzer returned NULL! Skipping FFT processing")
-            return
-        }
-        
-        // Smart filtering: If Phira is active recently, ignore Global's empty data
-        val phiraActiveRecently = (now - lastPhiraDataTimeMs) < 2000L  // Within 2 seconds
-        if (!isPhira && phiraActiveRecently && result.level < 0.05f) {
-            if (frameCount++ % 100L == 0L) {
-                log("⏭️ Skipping empty Global data (level=${"%.3f".format(result.level)}) while Phira is active")
-            }
             return
         }
         
@@ -286,6 +317,7 @@ class RhythmicEngine(context: Context) {
         const val PROBE_INTERVAL_MS = 5000L
         const val SESSION_WATCH_MS = 100L
         const val ATTACH_RETRY_MS = 2000L
+        const val PHIRA_TIMEOUT_MS = 2000L
         const val TAG = "RhythmicTouch"
     }
 }

@@ -22,6 +22,20 @@ object SystemUiHaptics {
     @Volatile
     private var receiver: BroadcastReceiver? = null
 
+    @Volatile
+    private var aaudioInterceptor: AAudioInterceptor? = null
+
+    @Volatile
+    private var nativeInterceptor: NativeAudioInterceptor? = null
+
+    fun setAaudioInterceptor(interceptor: AAudioInterceptor) {
+        aaudioInterceptor = interceptor
+    }
+
+    fun setNativeInterceptor(interceptor: NativeAudioInterceptor) {
+        nativeInterceptor = interceptor
+    }
+
     fun start(context: Context) {
         if (engine != null) return
         val ctx = context.applicationContext ?: context
@@ -31,6 +45,12 @@ object SystemUiHaptics {
         e.start()
         engine = e
         log("engine started, engineActive=${LiveState.engineActive}")
+
+        nativeInterceptor?.setAppContext(ctx)
+        val config = ConfigBridge(ctx).refresh(force = true)
+        aaudioInterceptor?.updateInterval(config.aaudioIntervalMs.toLong())
+        nativeInterceptor?.setSyncEnabled(config.syncAaudioWithAudioTrack)
+
         registerReceiver(ctx)
     }
 
@@ -44,14 +64,32 @@ object SystemUiHaptics {
             addAction(RhythmicConstants.ACTION_OBSERVE_START)
             addAction(RhythmicConstants.ACTION_OBSERVE_STOP)
             addAction(RhythmicConstants.ACTION_TEST_VIBRATION)
-            addAction("com.lyon.rhythmictouch.ACTION_PHIRA_FFT_DATA")  // Receive Phira FFT data!
+            addAction("com.lyon.rhythmictouch.ACTION_PHIRA_FFT_DATA")
+            addAction(RhythmicConstants.ACTION_SYNC_AAUDIO_INTERVAL)
+            addAction(RhythmicConstants.ACTION_REQUEST_DETECTED_INTERVAL)
         }
         val recv = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 log("broadcast received: ${intent?.action}")
                 val e = engine ?: return
                 when (intent?.action) {
-                    RhythmicConstants.ACTION_REFRESH_CONFIG -> e.refreshConfig()
+                    RhythmicConstants.ACTION_REFRESH_CONFIG -> {
+                        val config = e.refreshConfig()
+                        aaudioInterceptor?.updateInterval(config.aaudioIntervalMs.toLong())
+                        nativeInterceptor?.setSyncEnabled(config.syncAaudioWithAudioTrack)
+                        if (config.syncAaudioWithAudioTrack) {
+                            nativeInterceptor?.broadcastDetectedInterval()
+                        } else {
+                            val interval = intent.getIntExtra(RhythmicConstants.EXTRA_AAUDIO_INTERVAL_MS, -1)
+                            if (interval >= 0) {
+                                val syncIntent = Intent(RhythmicConstants.ACTION_SYNC_AAUDIO_INTERVAL).apply {
+                                    putExtra(RhythmicConstants.EXTRA_AAUDIO_INTERVAL_MS, interval)
+                                }
+                                context!!.sendBroadcast(syncIntent)
+                                log("📊 Forwarded manual interval to Phira: ${interval}ms")
+                            }
+                        }
+                    }
                     RhythmicConstants.ACTION_OBSERVE_START -> e.setObserving(true)
                     RhythmicConstants.ACTION_OBSERVE_STOP -> e.setObserving(false)
                     RhythmicConstants.ACTION_TEST_VIBRATION -> {
@@ -59,22 +97,24 @@ object SystemUiHaptics {
                         if (modeKey != null) e.testVibration(modeKey)
                     }
                     "com.lyon.rhythmictouch.ACTION_PHIRA_FFT_DATA" -> {
-                        // Receive FFT data from Phira process!
                         val fftData = intent.getByteArrayExtra("fft_data")
                         val samplingRate = intent.getIntExtra("sampling_rate", 44100)
                         val sourceApp = intent.getStringExtra("source_app") ?: "unknown"
                         
                         if (fftData != null && fftData.isNotEmpty()) {
-                            log("🎮📥 Received FFT data from $sourceApp: ${fftData.size} bytes, rate=$samplingRate, engine=${if (engine != null) "✅" else "❌ NULL"}")
-                            
-                            if (engine == null) {
-                                log("⚠️ ENGINE IS NULL! Cannot process FFT data!")
-                            } else {
-                                onAaudioFftData(fftData, samplingRate)  // Feed into vibration engine!
-                                log("✅ onAaudioFftData called successfully")
-                            }
-                        } else {
-                            log("⚠️ Received empty FFT data from $sourceApp")
+                            log("🎮📥 Received FFT data from $sourceApp: ${fftData.size} bytes, rate=$samplingRate")
+                            onAaudioFftData(fftData, samplingRate)
+                        }
+                    }
+                    RhythmicConstants.ACTION_SYNC_AAUDIO_INTERVAL -> {
+                        val interval = intent.getIntExtra(RhythmicConstants.EXTRA_AAUDIO_INTERVAL_MS, 100)
+                        aaudioInterceptor?.updateInterval(interval.toLong())
+                        log("📊 Synced AAudio interval: ${interval}ms")
+                    }
+                    RhythmicConstants.ACTION_REQUEST_DETECTED_INTERVAL -> {
+                        val cfg = ConfigBridge(context!!.applicationContext).refresh(force = true)
+                        if (cfg.syncAaudioWithAudioTrack) {
+                            nativeInterceptor?.broadcastDetectedInterval()
                         }
                     }
                 }
@@ -89,7 +129,6 @@ object SystemUiHaptics {
             }
             receiver = recv
         } catch (t: Throwable) {
-            // Observation and instant refresh will not work, but vibration still does.
         }
     }
 }

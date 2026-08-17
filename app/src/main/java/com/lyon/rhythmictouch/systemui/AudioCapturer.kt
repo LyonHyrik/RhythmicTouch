@@ -101,7 +101,7 @@ class AudioCapturer private constructor() {
             log("⚠️ Failed to set custom capture size")
         }
         
-        samplingRate = v.samplingRate
+        samplingRate = v.samplingRate / 1000  // Visualizer returns milliHertz
         captureSize = v.captureSize
         visualizer = v
         
@@ -408,7 +408,7 @@ class AudioCapturer private constructor() {
                     override fun onWaveFormDataCapture(visualizer: Visualizer?, waveform: ByteArray?, samplingRate: Int) = Unit
 
                     override fun onFftDataCapture(visualizer: Visualizer?, fft: ByteArray?, samplingRate: Int) {
-                        if (fft != null) fftListener?.invoke(fft, samplingRate)
+                        if (fft != null) fftListener?.invoke(fft, samplingRate / 1000)  // Convert milliHertz to Hertz
                     }
                 },
                 CAPTURE_PERIOD_MS,

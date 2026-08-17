@@ -15,6 +15,8 @@ data class RhythmicConfig(
     val profiles: List<VibrationProfile> = emptyList(),
     val activeProfileId: String = VibrationProfile.DEFAULT_ID,
     val deviceConfigs: List<DeviceVibrationConfig> = emptyList(),
+    val aaudioIntervalMs: Int = RhythmicConstants.DEFAULT_AAUDIO_INTERVAL_MS,
+    val syncAaudioWithAudioTrack: Boolean = RhythmicConstants.DEFAULT_SYNC_AAUDIO_WITH_AUDIOTRACK,
 ) {
     fun toBundle(): Bundle = Bundle().apply {
         putBoolean(RhythmicConstants.KEY_ENABLED, enabled)
@@ -28,6 +30,8 @@ data class RhythmicConfig(
         putStringArrayList("profiles_json", ArrayList(profiles.map { it.toJson() }))
         putString("active_profile_id", activeProfileId)
         putString("device_configs_json", DeviceVibrationConfig.toJson(deviceConfigs))
+        putInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, aaudioIntervalMs)
+        putBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, syncAaudioWithAudioTrack)
     }
 
     companion object {
@@ -46,6 +50,8 @@ data class RhythmicConfig(
                 profiles = profileJsons.mapNotNull { VibrationProfile.fromJson(it) },
                 activeProfileId = bundle.getString("active_profile_id", VibrationProfile.DEFAULT_ID) ?: VibrationProfile.DEFAULT_ID,
                 deviceConfigs = DeviceVibrationConfig.fromJson(bundle.getString("device_configs_json")),
+                aaudioIntervalMs = bundle.getInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, RhythmicConstants.DEFAULT_AAUDIO_INTERVAL_MS).coerceIn(33, 300),
+                syncAaudioWithAudioTrack = bundle.getBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, RhythmicConstants.DEFAULT_SYNC_AAUDIO_WITH_AUDIOTRACK),
             )
         }
     }

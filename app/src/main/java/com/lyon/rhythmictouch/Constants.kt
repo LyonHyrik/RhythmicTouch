@@ -15,6 +15,7 @@ object RhythmicConstants {
     const val KEY_LOG_MODE = "log_mode"
     const val KEY_MONET = "monet"
     const val KEY_VIBRATION_DELAY = "vibration_delay"
+    const val KEY_AAUDIO_INTERVAL_MS = "aaudio_interval_ms"
 
     const val PREF_PROFILES = "rhythmic_profiles"
     const val KEY_PROFILES_JSON = "profiles_json"
@@ -26,6 +27,7 @@ object RhythmicConstants {
     const val ACTION_OBSERVE_START = "com.lyon.rhythmictouch.ACTION_OBSERVE_START"
     const val ACTION_OBSERVE_STOP = "com.lyon.rhythmictouch.ACTION_OBSERVE_STOP"
     const val ACTION_TEST_VIBRATION = "com.lyon.rhythmictouch.ACTION_TEST_VIBRATION"
+    const val ACTION_SYNC_AAUDIO_INTERVAL = "com.lyon.rhythmictouch.ACTION_SYNC_AAUDIO_INTERVAL"
 
     const val EXTRA_ACTIVE = "active"
     const val EXTRA_LEVEL = "level"
@@ -39,6 +41,7 @@ object RhythmicConstants {
     const val EXTRA_PEAK_BAND_INDEX = "peak_band_index"
     const val EXTRA_VIBRATION_MODE = "vibration_mode"
     const val EXTRA_TEST_MODE_KEY = "test_mode_key"
+    const val EXTRA_AAUDIO_INTERVAL_MS = "aaudio_interval_ms"
 
     const val KEY_MODULE_VERSION = "module_version_code"
     const val METHOD_SET_MODULE_VERSION = "set_module_version"
@@ -54,6 +57,15 @@ object RhythmicConstants {
 
     const val DEFAULT_MONET = true
     const val DEFAULT_VIBRATION_DELAY = 0
+    const val DEFAULT_AAUDIO_INTERVAL_MS = 100
+    const val KEY_SYNC_AAUDIO_WITH_AUDIOTRACK = "sync_aaudio_with_audiotrack"
+    const val DEFAULT_SYNC_AAUDIO_WITH_AUDIOTRACK = true
+
+    const val ACTION_REQUEST_DETECTED_INTERVAL = "com.lyon.rhythmictouch.ACTION_REQUEST_DETECTED_INTERVAL"
+    const val EXTRA_SYNC_ENABLED = "sync_enabled"
+
+    const val ACTION_VIBRATOR_CALIBRATION_DONE = "com.lyon.rhythmictouch.ACTION_VIBRATOR_CALIBRATION_DONE"
+    const val EXTRA_VIBRATOR_MIN_MS = "vibrator_min_ms"
 
     val PROVIDER_URI: Uri = Uri.parse("content://$PROVIDER_AUTHORITY")
 }
