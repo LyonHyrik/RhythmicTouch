@@ -9,7 +9,7 @@
 *🔊 LSPosed 模块 · 从系统全局音频流中捕捉音乐节奏并触发马达振动*
 
 [![🔨 Build](https://github.com/LyonHyrik/RhythmicTouch/actions/workflows/build.yml/badge.svg)](https://github.com/LyonHyrik/RhythmicTouch/actions/workflows/build.yml)
-[![📜 License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![📜 License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![📱 API](https://img.shields.io/badge/API-28%2B-brightgreen.svg)](https://developer.android.com/about/versions/pie)
 
 </div>
@@ -95,4 +95,4 @@
 
 ## 📜 License
 
-[GNU General Public License v3.0](LICENSE)
+[GNU Affero General Public License v3.0](LICENSE)
