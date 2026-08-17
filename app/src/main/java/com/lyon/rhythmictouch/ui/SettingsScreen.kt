@@ -46,6 +46,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun SettingsScreen(
     store: ConfigStore,
     onMonetChange: (Boolean) -> Unit,
+    onDeviceSettings: () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
 ) {
     val context = LocalContext.current.applicationContext
@@ -199,6 +200,31 @@ fun SettingsScreen(
                             context.sendBroadcast(Intent(RhythmicConstants.ACTION_REFRESH_CONFIG))
                         },
                     )
+                }
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onDeviceSettings() }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = "设备振动设置",
+                            color = MiuixTheme.colorScheme.onSurfaceContainer,
+                        )
+                        Text(
+                            text = "为不同设备单独设置振动强度和延迟",
+                            color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                        )
+                    }
                 }
             }
 

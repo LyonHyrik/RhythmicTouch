@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import android.os.SystemClock
 import com.lyon.rhythmictouch.RhythmicConstants
+import com.lyon.rhythmictouch.config.DeviceVibrationConfig
 import com.lyon.rhythmictouch.config.RhythmicConfig
 import com.lyon.rhythmictouch.config.VibrationParams
 import com.lyon.rhythmictouch.config.VibrationProfile
@@ -45,6 +46,7 @@ class ConfigBridge(context: Context) {
         vibrationParams = VibrationParams.fromJson(cachePrefs.getString(RhythmicConstants.KEY_VIBRATION_PARAMS, null)),
         profiles = cachePrefs.getStringSet("profiles_json", emptySet())?.mapNotNull { VibrationProfile.fromJson(it) } ?: emptyList(),
         activeProfileId = cachePrefs.getString("active_profile_id", VibrationProfile.DEFAULT_ID) ?: VibrationProfile.DEFAULT_ID,
+        deviceConfigs = DeviceVibrationConfig.fromJson(cachePrefs.getString("device_configs_json", null)),
     )
 
     private fun writeCache(config: RhythmicConfig) {
@@ -60,6 +62,7 @@ class ConfigBridge(context: Context) {
                 .putString(RhythmicConstants.KEY_VIBRATION_PARAMS, config.vibrationParams.toJson())
                 .putStringSet("profiles_json", config.profiles.map { it.toJson() }.toSet())
                 .putString("active_profile_id", config.activeProfileId)
+                .putString("device_configs_json", DeviceVibrationConfig.toJson(config.deviceConfigs))
                 .apply()
         } catch (_: Throwable) {}
     }

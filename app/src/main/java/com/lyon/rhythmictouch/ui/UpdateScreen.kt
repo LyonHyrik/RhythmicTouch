@@ -32,6 +32,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
@@ -151,7 +152,7 @@ fun UpdateScreen(
                 title = "检查更新",
                 navigationIcon = {
                     IconButton(onClick = onDismiss) {
-                        androidx.compose.foundation.Image(
+                        Icon(
                             imageVector = MiuixIcons.Basic.ArrowRight,
                             contentDescription = "返回",
                             modifier = Modifier

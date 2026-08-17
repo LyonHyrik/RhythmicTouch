@@ -319,8 +319,8 @@ private fun ConfigEditorScreen(
     var name by remember { mutableStateOf(profile.name) }
 
     fun persist(updated: VibrationProfile) {
-        if (readOnly) return
         current = updated
+        if (readOnly) return
         profileStore.addOrUpdate(updated)
         context.sendBroadcast(Intent(RhythmicConstants.ACTION_REFRESH_CONFIG))
     }
@@ -570,7 +570,7 @@ private fun ModeSliderGroup(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (useRange) MiuixTheme.colorScheme.primaryContainer else MiuixTheme.colorScheme.surfaceContainerHighest)
-                        .then(if (editable) Modifier.clickable { onActiveBands(null) } else Modifier)
+                        .then(if (!useRange) Modifier.clickable { onActiveBands(null) } else Modifier)
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                 )
                 Spacer(Modifier.width(6.dp))
@@ -581,7 +581,7 @@ private fun ModeSliderGroup(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (!useRange) MiuixTheme.colorScheme.primaryContainer else MiuixTheme.colorScheme.surfaceContainerHighest)
-                        .then(if (editable) Modifier.clickable { onActiveBands(activeBands ?: (0..31).toList()) } else Modifier)
+                        .then(if (useRange) Modifier.clickable { onActiveBands(activeBands ?: (bandStart..bandEnd).toList()) } else Modifier)
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                 )
             }
@@ -787,16 +787,20 @@ private fun BandGridSelector(
                             .size(32.dp)
                             .clip(RoundedCornerShape(6.dp))
                             .background(
-                                if (isSelected) MiuixTheme.colorScheme.primary
-                                else MiuixTheme.colorScheme.surfaceContainerHighest
+                                if (isSelected) {
+                                    if (enabled) MiuixTheme.colorScheme.primary
+                                    else MiuixTheme.colorScheme.primary.copy(alpha = 0.35f)
+                                } else MiuixTheme.colorScheme.surfaceContainerHighest
                             )
                             .then(if (enabled) Modifier.clickable { onToggle(idx) } else Modifier),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = "$idx",
-                            color = if (isSelected) MiuixTheme.colorScheme.onPrimary
-                            else MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                            color = if (isSelected) {
+                                if (enabled) MiuixTheme.colorScheme.onPrimary
+                                else MiuixTheme.colorScheme.onSurfaceContainerVariant
+                            } else MiuixTheme.colorScheme.onSurfaceContainerVariant,
                             fontSize = 10.sp,
                         )
                     }

@@ -48,6 +48,7 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import com.lyon.rhythmictouch.BuildConfig
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -105,7 +106,7 @@ fun AboutScreen(
                 title = "关于",
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        androidx.compose.foundation.Image(
+                        Icon(
                             imageVector = MiuixIcons.Basic.ArrowRight,
                             contentDescription = "返回",
                             modifier = Modifier
@@ -141,6 +142,12 @@ fun AboutScreen(
                 text = "音律触感 · LSPosed 模块",
                 color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                 fontSize = 13.sp,
+            )
+
+            Text(
+                text = "v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                fontSize = 12.sp,
             )
 
             Spacer(Modifier.height(14.dp))

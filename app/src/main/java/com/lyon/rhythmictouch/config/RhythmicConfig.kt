@@ -14,6 +14,7 @@ data class RhythmicConfig(
     val vibrationParams: VibrationParams = VibrationParams.defaults(),
     val profiles: List<VibrationProfile> = emptyList(),
     val activeProfileId: String = VibrationProfile.DEFAULT_ID,
+    val deviceConfigs: List<DeviceVibrationConfig> = emptyList(),
 ) {
     fun toBundle(): Bundle = Bundle().apply {
         putBoolean(RhythmicConstants.KEY_ENABLED, enabled)
@@ -26,6 +27,7 @@ data class RhythmicConfig(
         putString(RhythmicConstants.KEY_VIBRATION_PARAMS, vibrationParams.toJson())
         putStringArrayList("profiles_json", ArrayList(profiles.map { it.toJson() }))
         putString("active_profile_id", activeProfileId)
+        putString("device_configs_json", DeviceVibrationConfig.toJson(deviceConfigs))
     }
 
     companion object {
@@ -43,6 +45,7 @@ data class RhythmicConfig(
                 vibrationParams = VibrationParams.fromJson(bundle.getString(RhythmicConstants.KEY_VIBRATION_PARAMS)),
                 profiles = profileJsons.mapNotNull { VibrationProfile.fromJson(it) },
                 activeProfileId = bundle.getString("active_profile_id", VibrationProfile.DEFAULT_ID) ?: VibrationProfile.DEFAULT_ID,
+                deviceConfigs = DeviceVibrationConfig.fromJson(bundle.getString("device_configs_json")),
             )
         }
     }

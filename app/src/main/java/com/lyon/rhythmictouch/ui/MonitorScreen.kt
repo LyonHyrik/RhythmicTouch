@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import kotlin.math.pow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.lyon.rhythmictouch.BuildConfig
 import com.lyon.rhythmictouch.LiveState
 import com.lyon.rhythmictouch.RhythmicConstants
 import com.lyon.rhythmictouch.systemui.SpectrumBand
@@ -59,6 +60,7 @@ import top.yukonga.miuix.kmp.icon.extended.Alarm
 import top.yukonga.miuix.kmp.icon.extended.Music
 import top.yukonga.miuix.kmp.icon.extended.Play
 import top.yukonga.miuix.kmp.icon.extended.RecordingTape
+import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Timer
 import top.yukonga.miuix.kmp.icon.extended.Tune
 import top.yukonga.miuix.kmp.icon.extended.VolumeOff
@@ -67,6 +69,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun MonitorScreen(
+    hookVersionMismatch: Boolean = false,
     bottomBar: @Composable () -> Unit = {},
 ) {
     Scaffold(
@@ -83,6 +86,9 @@ fun MonitorScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
+            if (hookVersionMismatch) {
+                HookVersionBanner()
+            }
             SmallTitle("音频检测")
 
             Card(
@@ -537,6 +543,55 @@ private val defaultBandsCache: List<SpectrumBand> by lazy {
             freqStart = startFreq,
             freqEnd = endFreq,
         )
+    }
+}
+
+@Composable
+private fun HookVersionBanner() {
+    val context = LocalContext.current
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                imageVector = MiuixIcons.Alarm,
+                contentDescription = null,
+                tint = MiuixTheme.colorScheme.error,
+                modifier = Modifier.size(20.dp),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "模块版本不一致",
+                    color = MiuixTheme.colorScheme.onSurface,
+                    fontSize = 14.sp,
+                )
+                Text(
+                    text = "请重启 SystemUI 使更新生效",
+                    color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                    fontSize = 12.sp,
+                )
+            }
+            Icon(
+                imageVector = MiuixIcons.Refresh,
+                contentDescription = "重启 SystemUI",
+                tint = MiuixTheme.colorScheme.primary,
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable {
+                        try {
+                            Runtime.getRuntime().exec(arrayOf("su", "-c", "am force-stop com.android.systemui"))
+                        } catch (_: Throwable) {}
+                    },
+            )
+        }
     }
 }
 

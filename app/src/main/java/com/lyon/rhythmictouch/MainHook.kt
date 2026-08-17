@@ -12,6 +12,7 @@ import com.lyon.rhythmictouch.systemui.SystemUiHaptics
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import com.lyon.rhythmictouch.BuildConfig
 
 class MainHook : IXposedHookLoadPackage {
 
@@ -190,6 +191,7 @@ class MainHook : IXposedHookLoadPackage {
                 
                 XposedBridge.log("[RhythmicTouch] ✅ currentApplication=${app.packageName}, starting engine")
                 
+                reportModuleVersion()
                 SystemUiHaptics.start(app.applicationContext)
                 
                 aaudioInterceptor.setFftListener { fft, rate ->
@@ -211,5 +213,21 @@ class MainHook : IXposedHookLoadPackage {
             .invoke(null) as Context?
     } catch (t: Throwable) {
         null
+    }
+
+    private fun reportModuleVersion() {
+        try {
+            val app = currentApplication() ?: return
+            val bundle = android.os.Bundle()
+            app.contentResolver.call(
+                RhythmicConstants.PROVIDER_URI,
+                RhythmicConstants.METHOD_SET_MODULE_VERSION,
+                BuildConfig.VERSION_CODE.toString(),
+                bundle,
+            )
+            XposedBridge.log("[RhythmicTouch] ✅ Module version reported: ${BuildConfig.VERSION_CODE}")
+        } catch (t: Throwable) {
+            XposedBridge.log("[RhythmicTouch] ⚠️ Failed to report module version: $t")
+        }
     }
 }

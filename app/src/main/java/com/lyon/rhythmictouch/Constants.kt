@@ -40,6 +40,10 @@ object RhythmicConstants {
     const val EXTRA_VIBRATION_MODE = "vibration_mode"
     const val EXTRA_TEST_MODE_KEY = "test_mode_key"
 
+    const val KEY_MODULE_VERSION = "module_version_code"
+    const val METHOD_SET_MODULE_VERSION = "set_module_version"
+    const val METHOD_GET_MODULE_VERSION = "get_module_version"
+
     const val DEFAULT_ENABLED = true
     const val DEFAULT_INTENSITY = 70
     const val DEFAULT_WHITELIST_MODE = false

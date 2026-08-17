@@ -18,8 +18,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.lyon.rhythmictouch.BuildConfig
 import com.lyon.rhythmictouch.RhythmicConstants
 import com.lyon.rhythmictouch.config.ConfigStore
+import com.lyon.rhythmictouch.config.DeviceConfigStore
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -57,6 +59,8 @@ private fun AppNav(
 ) {
     var screen by rememberSaveable { mutableStateOf(Screen.Monitor) }
     var showUpdate by rememberSaveable { mutableStateOf(false) }
+    var showDeviceSettings by rememberSaveable { mutableStateOf(false) }
+    var hookVersionMismatch by rememberSaveable { mutableStateOf(false) }
 
     val appContext = LocalContext.current.applicationContext
 
@@ -68,27 +72,27 @@ private fun AppNav(
         if (result != null && UpdateChecker.isNewer(result.latestVersion)) {
             showUpdate = true
         }
+        hookVersionMismatch = checkHookVersionMismatch(appContext)
     }
 
-    BackHandler(enabled = screen != Screen.Monitor) {
+    BackHandler(enabled = screen != Screen.Monitor && !showDeviceSettings && !showUpdate) {
         screen = Screen.Monitor
     }
 
-    val context = LocalContext.current.applicationContext
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> context.sendBroadcast(Intent(RhythmicConstants.ACTION_OBSERVE_START))
-                Lifecycle.Event.ON_STOP -> context.sendBroadcast(Intent(RhythmicConstants.ACTION_OBSERVE_STOP))
+                Lifecycle.Event.ON_START -> appContext.sendBroadcast(Intent(RhythmicConstants.ACTION_OBSERVE_START))
+                Lifecycle.Event.ON_STOP -> appContext.sendBroadcast(Intent(RhythmicConstants.ACTION_OBSERVE_STOP))
                 else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        context.sendBroadcast(Intent(RhythmicConstants.ACTION_OBSERVE_START))
+        appContext.sendBroadcast(Intent(RhythmicConstants.ACTION_OBSERVE_START))
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            context.sendBroadcast(Intent(RhythmicConstants.ACTION_OBSERVE_STOP))
+            appContext.sendBroadcast(Intent(RhythmicConstants.ACTION_OBSERVE_STOP))
         }
     }
 
@@ -100,8 +104,21 @@ private fun AppNav(
         return
     }
 
+    if (showDeviceSettings) {
+        val deviceStore = remember { DeviceConfigStore(appContext) }
+        val config = remember { mutableStateOf(store.read()) }
+        DeviceConfigListScreen(
+            store = deviceStore,
+            globalIntensity = config.value.intensity,
+            globalDelay = config.value.vibrationDelay,
+            onBack = { showDeviceSettings = false },
+        )
+        return
+    }
+
     when (screen) {
         Screen.Monitor -> MonitorScreen(
+            hookVersionMismatch = hookVersionMismatch,
             bottomBar = { MiuixBottomBar(selected = Screen.Monitor) { screen = it } },
         )
 
@@ -118,8 +135,24 @@ private fun AppNav(
         Screen.Settings -> SettingsScreen(
             store = store,
             onMonetChange = onMonetChange,
+            onDeviceSettings = { showDeviceSettings = true },
             bottomBar = { MiuixBottomBar(selected = Screen.Settings) { screen = it } },
         )
+    }
+}
+
+private fun checkHookVersionMismatch(context: android.content.Context): Boolean {
+    return try {
+        val result = context.contentResolver.call(
+            RhythmicConstants.PROVIDER_URI,
+            RhythmicConstants.METHOD_GET_MODULE_VERSION,
+            null,
+            null,
+        )
+        val hookVersion = result?.getInt(RhythmicConstants.KEY_MODULE_VERSION, 0) ?: 0
+        hookVersion != 0 && hookVersion != BuildConfig.VERSION_CODE
+    } catch (_: Throwable) {
+        false
     }
 }
 

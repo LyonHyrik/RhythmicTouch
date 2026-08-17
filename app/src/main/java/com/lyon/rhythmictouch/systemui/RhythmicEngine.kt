@@ -2,11 +2,14 @@ package com.lyon.rhythmictouch.systemui
 
 import android.content.Context
 import android.content.Intent
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
 import com.lyon.rhythmictouch.LiveState
 import com.lyon.rhythmictouch.RhythmicConstants
+import com.lyon.rhythmictouch.config.DeviceVibrationConfig
 import com.lyon.rhythmictouch.config.VibrationParams
 
 class RhythmicEngine(context: Context) {
@@ -21,6 +24,7 @@ class RhythmicEngine(context: Context) {
     private val driver = VibratorDriver(vibrator, analyzer)
     private val configBridge = ConfigBridge(appContext)
     private val activeTracker = ActiveAppTracker(appContext)
+    private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val statusThread = HandlerThread("rhythmic-status").apply { start() }
     private val statusHandler = Handler(statusThread.looper)
 
@@ -124,6 +128,30 @@ class RhythmicEngine(context: Context) {
         log("refreshConfig: active profile params applied, heavyLong=${config.vibrationParams.ampOf(com.lyon.rhythmictouch.config.VibrationParams.KEY_HEAVY_LONG)}%/${config.vibrationParams.durOf(com.lyon.rhythmictouch.config.VibrationParams.KEY_HEAVY_LONG)}ms delay=${config.vibrationDelay}ms")
     }
 
+    private fun getCurrentOutputDeviceAddress(): String {
+        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        for (device in devices) {
+            when (device.type) {
+                AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+                AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+                AudioDeviceInfo.TYPE_BLE_HEADSET,
+                AudioDeviceInfo.TYPE_BLE_SPEAKER -> {
+                    val addr = device.address
+                    if (addr.isNotBlank() && addr != "00:00:00:00:00:00") return addr
+                }
+                AudioDeviceInfo.TYPE_WIRED_HEADSET,
+                AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+                AudioDeviceInfo.TYPE_USB_HEADSET -> return "headphone"
+            }
+        }
+        return "speaker"
+    }
+
+    private fun getDeviceOverride(config: com.lyon.rhythmictouch.config.RhythmicConfig, deviceAddress: String): Pair<Int, Int>? {
+        val match = config.deviceConfigs.find { it.deviceAddress == deviceAddress && it.enabled }
+        return if (match != null) match.intensity to match.vibrationDelay else null
+    }
+
     fun testVibration(modeKey: String) {
         log("🧪 testVibration: modeKey=$modeKey")
         driver.testVibration(modeKey)
@@ -186,7 +214,11 @@ class RhythmicEngine(context: Context) {
         val effectiveParams = matchedProfile?.params ?: config.vibrationParams
 
         driver.updateParams(effectiveParams)
-        driver.updateDelayMs(config.vibrationDelay.toLong())
+        val deviceAddr = getCurrentOutputDeviceAddress()
+        val deviceOverride = getDeviceOverride(config, deviceAddr)
+        val effectiveIntensity = deviceOverride?.first ?: config.intensity
+        val effectiveDelay = deviceOverride?.second ?: config.vibrationDelay
+        driver.updateDelayMs(effectiveDelay.toLong())
         val blocked = !config.enabled || activeTracker.isBlocked(config.whitelistMode, config.excludedApps)
 
         log("🔍 DEBUG: enabled=${config.enabled}, whitelistMode=${config.whitelistMode}, scopeApps=${config.excludedApps}, isBlocked=${activeTracker.isBlocked(config.whitelistMode, config.excludedApps)}, blocked=$blocked, level=${"%.2f".format(result.level)}, foreground=$foregroundApp, matchedProfile=${matchedProfile?.name ?: "默认"}")
@@ -212,8 +244,8 @@ class RhythmicEngine(context: Context) {
         if (blocked) {
             log("❌ VIBRATION BLOCKED! driver.stop() called")
         } else {
-            log("🔍 Before driver: bands.size=${result.bands.size}, first5=${result.bands.take(5)}, level=${"%.2f".format(result.level)}")
-            driver.onAnalysis(result, config.intensity.toFloat() / 100f, now)
+            log("🔍 Before driver: bands.size=${result.bands.size}, first5=${result.bands.take(5)}, level=${"%.2f".format(result.level)}, device=$deviceAddr, intensity=$effectiveIntensity%, delay=${effectiveDelay}ms")
+            driver.onAnalysis(result, effectiveIntensity.toFloat() / 100f, now)
         }
 
         if (observing) {

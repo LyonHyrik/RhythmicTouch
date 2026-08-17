@@ -21,6 +21,15 @@ object ProfileExporter {
         return profile.toJson().toByteArray(Charsets.UTF_8)
     }
 
+    fun deviceConfigJsonBytes(devices: List<DeviceVibrationConfig>): ByteArray {
+        return DeviceVibrationConfig.toJson(devices).toByteArray(Charsets.UTF_8)
+    }
+
+    fun importDeviceConfigFromBytes(bytes: ByteArray): List<DeviceVibrationConfig> {
+        val json = String(bytes, Charsets.UTF_8)
+        return DeviceVibrationConfig.fromJson(json)
+    }
+
     fun batchZipBytes(profiles: List<VibrationProfile>): ByteArray? {
         val customs = profiles.filter { !it.isDefault }
         if (customs.isEmpty()) return null

@@ -6,30 +6,46 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
+import com.lyon.rhythmictouch.RhythmicConstants
 
 class ConfigProvider : ContentProvider() {
 
     private var store: ConfigStore? = null
     private var profileStore: ProfileStore? = null
+    private var deviceConfigStore: DeviceConfigStore? = null
 
     override fun onCreate(): Boolean {
         val appCtx = context?.applicationContext
         store = appCtx?.let { ConfigStore(it) }
         profileStore = appCtx?.let { ProfileStore(it) }
+        deviceConfigStore = appCtx?.let { DeviceConfigStore(it) }
         return store != null
     }
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
-        if (method == "get_config") {
-            val config = store?.read() ?: RhythmicConfig()
-            val profiles = profileStore?.readProfiles() ?: emptyList()
-            val activeProfile = profileStore?.getActive()
-            val params = activeProfile?.params ?: VibrationParams.defaults()
-            return config.copy(
-                vibrationParams = params,
-                profiles = profiles,
-                activeProfileId = profileStore?.readActiveId() ?: VibrationProfile.DEFAULT_ID,
-            ).toBundle()
+        when (method) {
+            "get_config" -> {
+                val config = store?.read() ?: RhythmicConfig()
+                val profiles = profileStore?.readProfiles() ?: emptyList()
+                val activeProfile = profileStore?.getActive()
+                val params = activeProfile?.params ?: VibrationParams.defaults()
+                return config.copy(
+                    vibrationParams = params,
+                    profiles = profiles,
+                    activeProfileId = profileStore?.readActiveId() ?: VibrationProfile.DEFAULT_ID,
+                    deviceConfigs = deviceConfigStore?.readDevices() ?: emptyList(),
+                ).toBundle()
+            }
+            RhythmicConstants.METHOD_SET_MODULE_VERSION -> {
+                val prefs = context?.getSharedPreferences(RhythmicConstants.PREF_NAME, android.content.Context.MODE_PRIVATE)
+                prefs?.edit()?.putInt(RhythmicConstants.KEY_MODULE_VERSION, arg?.toIntOrNull() ?: 0)?.apply()
+                return Bundle()
+            }
+            RhythmicConstants.METHOD_GET_MODULE_VERSION -> {
+                val prefs = context?.getSharedPreferences(RhythmicConstants.PREF_NAME, android.content.Context.MODE_PRIVATE)
+                val version = prefs?.getInt(RhythmicConstants.KEY_MODULE_VERSION, 0) ?: 0
+                return Bundle().apply { putInt(RhythmicConstants.KEY_MODULE_VERSION, version) }
+            }
         }
         return null
     }
