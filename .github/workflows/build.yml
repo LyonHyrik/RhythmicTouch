@@ -1,4 +1,4 @@
-name: Build & Sync
+name: Build
 
 on:
   push:
@@ -71,23 +71,3 @@ jobs:
         with:
           name: RhythmicTouch-release
           path: app/build/outputs/apk/release/app-release.apk
-
-  sync-dev-to-main:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: main
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Sync dev → main
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin dev
-          git merge origin/dev --no-edit
-          git push origin main
