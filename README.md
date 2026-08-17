@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🎵 RhythmicTouch
+<img src="docs/icon.png" width="128" />
+
+# 🎵 RhythmicTouch 音律触感
 
 **让马达随着音律而舞动**
 
