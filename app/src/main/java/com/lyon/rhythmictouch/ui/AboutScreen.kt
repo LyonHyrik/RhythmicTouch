@@ -48,7 +48,9 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.ArrowRight
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import androidx.compose.ui.res.stringResource
 import com.lyon.rhythmictouch.BuildConfig
+import com.lyon.rhythmictouch.R
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -92,7 +94,7 @@ fun AboutScreen(
                     .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
             )
         } catch (t: Throwable) {
-            Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.toast_open_link_error), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -103,12 +105,12 @@ fun AboutScreen(
     Scaffold(
         topBar = {
             SmallTopAppBar(
-                title = "关于",
+                title = stringResource(R.string.screen_about),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Basic.ArrowRight,
-                            contentDescription = "返回",
+                            contentDescription = stringResource(R.string.action_back),
                             modifier = Modifier
                                 .size(24.dp)
                                 .graphicsLayer { scaleX = -1f },
@@ -139,7 +141,7 @@ fun AboutScreen(
             )
 
             Text(
-                text = "音律触感 · LSPosed 模块",
+                text = stringResource(R.string.app_subtitle),
                 color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                 fontSize = 13.sp,
             )
@@ -153,7 +155,7 @@ fun AboutScreen(
             Spacer(Modifier.height(14.dp))
 
             Text(
-                text = "从系统全局音频流中捕捉音乐节奏并触发振动，让马达随着音律而舞动，支持按应用作用域控制。",
+                text = stringResource(R.string.app_description),
                 color = MiuixTheme.colorScheme.onSurfaceContainer,
                 fontSize = 13.sp,
                 modifier = Modifier.padding(horizontal = 28.dp),
@@ -161,7 +163,7 @@ fun AboutScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            SmallTitle("作者")
+            SmallTitle(stringResource(R.string.section_author))
 
             Card(
                 modifier = Modifier
@@ -185,7 +187,7 @@ fun AboutScreen(
                         )
                         val ownContributions = contributors?.firstOrNull { it.login == AUTHOR_NAME }?.contributions
                         Text(
-                            text = if (ownContributions != null) "开发者 · $ownContributions 次贡献" else "开发者",
+                            text = if (ownContributions != null) "${stringResource(R.string.label_developer_only)} · ${stringResource(R.string.label_contributions, ownContributions)}" else stringResource(R.string.label_developer_only),
                             color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                             fontSize = 12.sp,
                         )
@@ -195,7 +197,7 @@ fun AboutScreen(
 
             val otherContributors = contributors?.filter { it.login != AUTHOR_NAME }
             if (!otherContributors.isNullOrEmpty()) {
-                SmallTitle("贡献者")
+                SmallTitle(stringResource(R.string.section_contributors))
 
                 Card(
                     modifier = Modifier
@@ -213,7 +215,7 @@ fun AboutScreen(
                 }
             }
 
-            SmallTitle("联系方式")
+            SmallTitle(stringResource(R.string.section_contact))
 
             Card(
                 modifier = Modifier
@@ -221,9 +223,9 @@ fun AboutScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Column {
-                    AboutRow(title = "博客", value = AUTHOR_BLOG, onClick = { openUrl(AUTHOR_BLOG) })
-                    AboutRow(title = "酷安", value = "LyonHyrik", onClick = { openUrl(AUTHOR_COOLAPK) })
-                    AboutRow(title = "开源地址", value = GITHUB_REPO, onClick = { openUrl(GITHUB_REPO) })
+                    AboutRow(title = stringResource(R.string.label_blog), value = AUTHOR_BLOG, onClick = { openUrl(AUTHOR_BLOG) })
+                    AboutRow(title = stringResource(R.string.label_coolapk), value = "LyonHyrik", onClick = { openUrl(AUTHOR_COOLAPK) })
+                    AboutRow(title = stringResource(R.string.label_github), value = GITHUB_REPO, onClick = { openUrl(GITHUB_REPO) })
                 }
             }
 
@@ -232,7 +234,7 @@ fun AboutScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
-                AboutRow(title = "检查更新", value = "点击查看是否有新版本", onClick = { showUpdate = true })
+                AboutRow(title = stringResource(R.string.label_check_update), value = stringResource(R.string.label_check_update_desc), onClick = { showUpdate = true })
             }
 
             Spacer(Modifier.height(24.dp))
@@ -338,7 +340,7 @@ private fun ContributorRow(
                 fontWeight = FontWeight.Medium,
             )
             Text(
-                text = "${contributor.contributions} 次贡献",
+                text = stringResource(R.string.label_contributions, contributor.contributions),
                 color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                 fontSize = 12.sp,
             )
@@ -402,14 +404,14 @@ private fun AppIcon(monetEnabled: Boolean) {
                 ) {
                     Image(
                         bitmap = icon,
-                        contentDescription = "软件图标",
+                        contentDescription = stringResource(R.string.content_app_icon),
                         modifier = Modifier.size(64.dp),
                     )
                 }
             } else {
                 Image(
                     bitmap = icon,
-                    contentDescription = "软件图标",
+                    contentDescription = stringResource(R.string.content_app_icon),
                     modifier = Modifier.size(64.dp),
                 )
             }
@@ -467,7 +469,7 @@ private fun NetworkAvatar(url: String, size: Int) {
         if (bitmap != null) {
             Image(
                 bitmap = bitmap!!,
-                contentDescription = "作者头像",
+                contentDescription = stringResource(R.string.content_avatar),
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(CircleShape),

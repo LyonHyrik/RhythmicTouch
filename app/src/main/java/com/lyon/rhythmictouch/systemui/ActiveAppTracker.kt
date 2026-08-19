@@ -20,6 +20,12 @@ class ActiveAppTracker(context: Context) {
     var activeSessions: List<Int> = emptyList()
         private set
 
+    @Volatile
+    var daemonUids: Set<Int> = emptySet()
+
+    val mergedActiveUids: List<Int>
+        get() = activeUids.distinct()
+
     private var lastRefreshMs = 0L
 
     var hasAAudioApps = false
@@ -100,6 +106,17 @@ class ActiveAppTracker(context: Context) {
     }
 
     fun primarySessionId(): Int {
+        val distinctApps = mergedActiveUids
+            .filterNot { isSystemUid(it) }
+            .mapNotNull { packageForUid(it) }
+            .distinct()
+
+        // Multiple different apps playing → use Global Visualizer
+        if (distinctApps.size > 1) {
+            log("🎯 primarySessionId()=0 (multi-app: $distinctApps) → Global Visualizer")
+            return 0
+        }
+
         // Priority 1: Return AAudio session (-9999) if detected (for Phira support)
         val aaudioIndex = activeSessions.indexOf(-9999)
         if (aaudioIndex >= 0) {
@@ -118,18 +135,28 @@ class ActiveAppTracker(context: Context) {
     }
 
     fun isBlocked(whitelistMode: Boolean, scopeApps: Set<String>): Boolean {
-        val activePkgs = activeUids.mapNotNull { packageForUid(it) }.distinct()
+        val activePkgs = mergedActiveUids
+            .filterNot { isSystemUid(it) }
+            .mapNotNull { packageForUid(it) }
+            .distinct()
+        if (activePkgs.isEmpty()) return false
         return if (whitelistMode) {
-            activePkgs.isNotEmpty() && activePkgs.none { it in scopeApps }
+            activePkgs.none { it in scopeApps }
         } else {
-            activePkgs.any { it in scopeApps }
+            activePkgs.all { it in scopeApps }
         }
     }
 
+    fun activeAppCount(): Int =
+        mergedActiveUids.filterNot { isSystemUid(it) }
+            .mapNotNull { packageForUid(it) }
+            .distinct().size
+
     fun primaryApp(): String? {
-        for (uid in activeUids) {
+        for (uid in mergedActiveUids) {
+            if (isSystemUid(uid)) continue
             val pkg = packageForUid(uid)
-            if (pkg != null && pkg != RhythmicConstants.SYSTEMUI_PACKAGE) return pkg
+            if (pkg != null) return pkg
         }
         return null
     }
@@ -144,6 +171,10 @@ class ActiveAppTracker(context: Context) {
         if (name != null) uidCache[uid] = name
         return name
     }
+
+    private fun isSystemUid(uid: Int): Boolean =
+        uid == Process.SYSTEM_UID ||
+            (packageForUid(uid)?.let { it.contains("systemui", ignoreCase = true) || it == RhythmicConstants.SYSTEMUI_PACKAGE } ?: false)
 
     private fun clientUidOf(cfg: AudioPlaybackConfiguration): Int =
         invokeSafe(uidMethod) { it.invoke(cfg) as Int } ?: -1

@@ -12,6 +12,8 @@
 [![📜 License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![📱 API](https://img.shields.io/badge/API-28%2B-brightgreen.svg)](https://developer.android.com/about/versions/pie)
 
+[English](README.en.md) · 中文
+
 </div>
 
 ---
@@ -55,6 +57,9 @@
 - 📁 **多配置文件系统** — 创建多个配置文件，按应用自动切换（scope-based）
 - 📤 **配置文件导入导出** — 单个 JSON 或批量 ZIP 打包分享
 - 🧠 **自适应阈值** — 根据历史能量动态调整触发灵敏度
+- 🌐 **国际化** — 中英文双语 UI
+- ⏰ **静默时段** — 定时关功能，在指定时间段内暂停触觉反馈
+- 🔧 **Daemon 进程** — 后台服务，持续监听触觉反馈
 - 🎨 **Miuix UI** — Material You 动态取色主题
 
 ## 📋 环境要求

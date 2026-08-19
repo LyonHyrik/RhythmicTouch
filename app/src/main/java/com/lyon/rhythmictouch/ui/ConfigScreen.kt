@@ -44,6 +44,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.lyon.rhythmictouch.R
 import com.lyon.rhythmictouch.RhythmicConstants
 import com.lyon.rhythmictouch.config.ConfigStore
 import com.lyon.rhythmictouch.config.ProfileExporter
@@ -113,7 +115,7 @@ fun ConfigScreen(
                 val ok = ProfileExporter.writeToUri(context, uri, bytes)
                 Toast.makeText(
                     context,
-                    if (ok) "已导出 ${target.name}.json" else "导出失败",
+                    if (ok) context.getString(R.string.toast_exported_single, target.name) else context.getString(R.string.toast_export_failed),
                     Toast.LENGTH_SHORT,
                 ).show()
             }
@@ -128,7 +130,7 @@ fun ConfigScreen(
             val ok = ProfileExporter.writeToUri(context, uri, bytes)
             Toast.makeText(
                 context,
-                if (ok) "已导出配置包 zip" else "导出失败",
+                if (ok) context.getString(R.string.toast_exported_batch) else context.getString(R.string.toast_export_failed),
                 Toast.LENGTH_SHORT,
             ).show()
         }
@@ -151,7 +153,7 @@ fun ConfigScreen(
         reload()
         Toast.makeText(
             context,
-            if (count > 0) "导入成功 $count 个配置" else "未找到可导入的配置",
+            if (count > 0) context.getString(R.string.toast_imported_count, count) else context.getString(R.string.toast_import_none),
             Toast.LENGTH_SHORT,
         ).show()
     }
@@ -174,27 +176,27 @@ fun ConfigScreen(
     Scaffold(
         topBar = {
             SmallTopAppBar(
-                title = "配置",
+                title = stringResource(R.string.screen_config),
                 actions = {
                     IconButton(onClick = { importLauncher.launch("*/*") }) {
-                        Icon(MiuixIcons.Import, contentDescription = "导入")
+                        Icon(MiuixIcons.Import, contentDescription = stringResource(R.string.action_import))
                     }
                     IconButton(onClick = {
                         val bytes = ProfileExporter.batchZipBytes(profiles)
                         if (bytes == null) {
-                            Toast.makeText(context, "没有可导出的自定义配置", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.toast_no_custom_profiles), Toast.LENGTH_SHORT).show()
                         } else {
                             pendingZipBytes = bytes
                             exportZipLauncher.launch(ProfileExporter.suggestedBatchFileName())
                         }
                     }) {
-                        Icon(MiuixIcons.Backup, contentDescription = "批量导出")
+                        Icon(MiuixIcons.Backup, contentDescription = stringResource(R.string.action_batch_export))
                     }
                     IconButton(onClick = {
                         editingIsNew = true
                         editing = profileStore.createDraft()
                     }) {
-                        Icon(MiuixIcons.Add, contentDescription = "新建配置")
+                        Icon(MiuixIcons.Add, contentDescription = stringResource(R.string.action_new_profile))
                     }
                 },
             )
@@ -207,7 +209,7 @@ fun ConfigScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
-            SmallTitle("配置文件")
+            SmallTitle(stringResource(R.string.section_profiles))
 
             Card(
                 modifier = Modifier
@@ -239,7 +241,7 @@ fun ConfigScreen(
             }
 
             Text(
-                text = "点击配置即可切换启用 · 长按进入参数修改",
+                text = stringResource(R.string.hint_profile_list),
                 color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
             )
@@ -278,11 +280,11 @@ private fun ProfileRow(
             )
             Text(
                 text = when {
-                    profile.isDefault -> "内置默认 · 长按查看"
-                    profile.scopeApps.isNotEmpty() && isActive -> "作用域 ${profile.scopeApps.size} 个应用 · 当前生效"
-                    profile.scopeApps.isNotEmpty() -> "作用域 ${profile.scopeApps.size} 个应用 · 长按修改"
-                    isActive -> "全局配置 · 当前生效 · 长按修改"
-                    else -> "点击启用 · 长按修改"
+                    profile.isDefault -> stringResource(R.string.profile_default_summary)
+                    profile.scopeApps.isNotEmpty() && isActive -> stringResource(R.string.profile_scoped_active, profile.scopeApps.size)
+                    profile.scopeApps.isNotEmpty() -> stringResource(R.string.profile_scoped_inactive, profile.scopeApps.size)
+                    isActive -> stringResource(R.string.profile_global_active)
+                    else -> stringResource(R.string.profile_global_inactive)
                 },
                 color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
             )
@@ -290,16 +292,16 @@ private fun ProfileRow(
         if (isActive) {
             Icon(
                 imageVector = MiuixIcons.Basic.Check,
-                contentDescription = "当前生效",
+                contentDescription = null,
                 tint = MiuixTheme.colorScheme.primary,
             )
         }
         if (!profile.isDefault) {
             IconButton(onClick = onExport) {
-                Icon(MiuixIcons.Download, contentDescription = "导出")
+                Icon(MiuixIcons.Download, contentDescription = stringResource(R.string.action_export))
             }
             IconButton(onClick = onDelete) {
-                Icon(MiuixIcons.Delete, contentDescription = "删除")
+                Icon(MiuixIcons.Delete, contentDescription = stringResource(R.string.action_delete))
             }
         }
     }
@@ -327,7 +329,7 @@ private fun ConfigEditorScreen(
 
     fun finish() {
         if (readOnly) return
-        val safeName = name.trim().ifEmpty { "未命名配置" }
+        val safeName = name.trim().ifEmpty { context.getString(R.string.label_profile_name_default) }
         persist(current.copy(name = safeName))
         onBack()
     }
@@ -339,12 +341,12 @@ private fun ConfigEditorScreen(
     Scaffold(
         topBar = {
             SmallTopAppBar(
-                title = if (readOnly) "${profile.name} (只读)" else if (isNew) "新建配置" else profile.name,
+                title = if (readOnly) "${profile.name} ${stringResource(R.string.profile_readonly_suffix)}" else if (isNew) stringResource(R.string.screen_profile_new) else profile.name,
                 navigationIcon = {
                     IconButton(onClick = { cancel() }) {
                         Icon(
                             imageVector = MiuixIcons.Basic.ArrowRight,
-                            contentDescription = "返回",
+                            contentDescription = stringResource(R.string.action_back),
                             modifier = Modifier.graphicsLayer { rotationZ = 180f },
                         )
                     }
@@ -352,7 +354,7 @@ private fun ConfigEditorScreen(
                 actions = {
                     if (!readOnly) {
                         IconButton(onClick = { finish() }) {
-                            Icon(MiuixIcons.Basic.Check, contentDescription = "保存")
+                            Icon(MiuixIcons.Basic.Check, contentDescription = stringResource(R.string.action_save))
                         }
                     }
                 },
@@ -366,7 +368,7 @@ private fun ConfigEditorScreen(
                 .verticalScroll(rememberScrollState()),
         ) {
             Text(
-                text = if (readOnly) "此配置为内置默认，仅可查看" else "拖动滑块实时生效，无需重启",
+                text = if (readOnly) stringResource(R.string.hint_profile_readonly) else stringResource(R.string.hint_profile_editable),
                 color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
             )
@@ -377,7 +379,7 @@ private fun ConfigEditorScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                label = "配置名称",
+                label = stringResource(R.string.label_profile_name),
                 enabled = !readOnly,
             )
 
@@ -387,10 +389,10 @@ private fun ConfigEditorScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Column {
-                    VibrationParams.MODE_LABELS.forEach { (key, label) ->
+                    VibrationParams.MODE_LABELS.forEach { (key, labelRes) ->
                         ModeSliderGroup(
                             icon = modeIcons[key],
-                            label = label,
+                            label = stringResource(labelRes),
                             amp = current.params.ampOf(key),
                             dur = current.params.durOf(key),
                             bandStart = current.params.bandStartOf(key),
@@ -420,9 +422,9 @@ private fun ConfigEditorScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("配置文件作用域", color = MiuixTheme.colorScheme.onSurfaceContainer, fontSize = 14.sp)
+                    Text(stringResource(R.string.section_profile_scope), color = MiuixTheme.colorScheme.onSurfaceContainer, fontSize = 14.sp)
                     Text(
-                        text = if (current.scopeApps.isEmpty()) "全局配置 · 无作用域限制" else "匹配到对应软件时自动激活此配置",
+                        text = if (current.scopeApps.isEmpty()) stringResource(R.string.scope_global_desc) else stringResource(R.string.scope_scoped_desc),
                         color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         fontSize = 12.sp,
                     )
@@ -453,7 +455,7 @@ private fun ConfigEditorScreen(
                                 }
                             }
                         } else {
-                            Text("无", color = MiuixTheme.colorScheme.onSurfaceContainerVariant, fontSize = 12.sp)
+                            Text(stringResource(R.string.label_none), color = MiuixTheme.colorScheme.onSurfaceContainerVariant, fontSize = 12.sp)
                         }
                     } else {
                         ScopeAppsEditor(
@@ -520,7 +522,7 @@ private fun ModeSliderGroup(
             )
         }
         SliderRow(
-            label = "振幅",
+            label = stringResource(R.string.label_amplitude),
             value = amp.toFloat(),
             valueText = "$amp%",
             editable = editable,
@@ -529,7 +531,7 @@ private fun ModeSliderGroup(
         )
         Spacer(Modifier.height(14.dp))
         SliderRow(
-            label = "时长",
+            label = stringResource(R.string.label_duration),
             value = dur.toFloat(),
             valueText = "${dur}ms",
             editable = editable,
@@ -538,17 +540,21 @@ private fun ModeSliderGroup(
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = if (expanded) "收起频段设置 ▲" else buildString {
-                append("频段设置 ▼ · ")
-                if (useRange) {
-                    if (bandStart == 0 && bandEnd == 31) {
-                        append("全频段")
+            text = if (expanded) stringResource(R.string.action_collapse_bands) else run {
+                val allBandsLabel = stringResource(R.string.label_all_bands)
+                val count = activeBands?.size ?: 0
+                val selectedBandsLabel = stringResource(R.string.label_selected_bands, count)
+                buildString {
+                    append(stringResource(R.string.label_expand_bands))
+                    if (useRange) {
+                        if (bandStart == 0 && bandEnd == 31) {
+                            append(allBandsLabel)
+                        } else {
+                            append(stringResource(R.string.label_band_range, bandStart, BandLabels.label(bandStart), bandEnd, BandLabels.label(bandEnd)))
+                        }
                     } else {
-                        append("范围 #${bandStart}(${BandLabels.label(bandStart)}) - #${bandEnd}(${BandLabels.label(bandEnd)})")
+                        if (count == 32) append(allBandsLabel) else append(selectedBandsLabel)
                     }
-                } else {
-                    val count = activeBands?.size ?: 0
-                    if (count == 32) append("全频段") else append("已选 $count 个频段")
                 }
             },
             color = MiuixTheme.colorScheme.primary,
@@ -561,10 +567,10 @@ private fun ModeSliderGroup(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("模式:", color = MiuixTheme.colorScheme.onSurfaceContainerVariant, fontSize = 12.sp)
+                Text(stringResource(R.string.label_band_mode), color = MiuixTheme.colorScheme.onSurfaceContainerVariant, fontSize = 12.sp)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "范围",
+                    text = stringResource(R.string.band_mode_range),
                     color = if (useRange) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceContainerVariant,
                     fontSize = 12.sp,
                     modifier = Modifier
@@ -575,7 +581,7 @@ private fun ModeSliderGroup(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = "频段",
+                    text = stringResource(R.string.band_mode_individual),
                     color = if (!useRange) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceContainerVariant,
                     fontSize = 12.sp,
                     modifier = Modifier
@@ -587,7 +593,7 @@ private fun ModeSliderGroup(
             }
             Spacer(Modifier.height(6.dp))
             if (useRange) {
-                Text("范围: #${bandStart}(${BandLabels.label(bandStart)}) - #${bandEnd}(${BandLabels.label(bandEnd)})", color = MiuixTheme.colorScheme.primary, fontSize = 11.sp)
+                Text(stringResource(R.string.label_band_range, bandStart, BandLabels.label(bandStart), bandEnd, BandLabels.label(bandEnd)), color = MiuixTheme.colorScheme.primary, fontSize = 11.sp)
                 BandRangeSlider(
                     start = bandStart,
                     end = bandEnd,
@@ -725,15 +731,15 @@ private fun ScopeAppsEditor(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("选择应用", color = MiuixTheme.colorScheme.onSurfaceContainer, fontSize = 14.sp)
-                    Text("关闭", color = MiuixTheme.colorScheme.primary, modifier = Modifier.clickable { showPicker = false }, fontSize = 14.sp)
+                    Text(stringResource(R.string.section_scope_apps), color = MiuixTheme.colorScheme.onSurfaceContainer, fontSize = 14.sp)
+                    Text(stringResource(R.string.action_close), color = MiuixTheme.colorScheme.primary, modifier = Modifier.clickable { showPicker = false }, fontSize = 14.sp)
                 }
                 Spacer(Modifier.height(8.dp))
                 TextField(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = "搜索",
+                    label = stringResource(R.string.label_search),
                 )
                 Spacer(Modifier.height(8.dp))
                 LazyColumn(modifier = Modifier.height(300.dp)) {
@@ -750,7 +756,7 @@ private fun ScopeAppsEditor(
                                 Text(text = app.label, color = MiuixTheme.colorScheme.onSurfaceContainer, fontSize = 14.sp)
                                 Text(text = app.pkg, color = MiuixTheme.colorScheme.onSurfaceContainerVariant, fontSize = 11.sp)
                             }
-                            Icon(MiuixIcons.Add, contentDescription = "添加", tint = MiuixTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            Icon(MiuixIcons.Add, contentDescription = stringResource(R.string.label_add_app), tint = MiuixTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
@@ -759,7 +765,7 @@ private fun ScopeAppsEditor(
     }
 
     Text(
-        text = if (!showPicker) (if (scopeApps.isEmpty()) "添加应用" else "继续添加") else "",
+        text = if (!showPicker) (if (scopeApps.isEmpty()) stringResource(R.string.link_add_apps) else stringResource(R.string.link_add_more_apps)) else "",
         color = MiuixTheme.colorScheme.primary,
         modifier = Modifier
             .clickable { if (!showPicker) { showPicker = true; query = "" } }
@@ -826,7 +832,7 @@ private fun BandRangeSlider(
                 .height(40.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = "起始", color = MiuixTheme.colorScheme.onSurfaceContainerVariant, modifier = Modifier.width(36.dp), fontSize = 12.sp)
+            Text(text = stringResource(R.string.label_start_band), color = MiuixTheme.colorScheme.onSurfaceContainerVariant, modifier = Modifier.width(36.dp), fontSize = 12.sp)
             Slider(
                 value = start.toFloat(),
                 onValueChange = { onStartChange(it.toInt()) },
@@ -841,7 +847,7 @@ private fun BandRangeSlider(
                 .height(40.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = "结束", color = MiuixTheme.colorScheme.onSurfaceContainerVariant, modifier = Modifier.width(36.dp), fontSize = 12.sp)
+            Text(text = stringResource(R.string.label_end_band), color = MiuixTheme.colorScheme.onSurfaceContainerVariant, modifier = Modifier.width(36.dp), fontSize = 12.sp)
             Slider(
                 value = end.toFloat(),
                 onValueChange = { onEndChange(it.toInt()) },

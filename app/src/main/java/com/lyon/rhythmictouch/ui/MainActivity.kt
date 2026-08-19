@@ -1,5 +1,6 @@
 package com.lyon.rhythmictouch.ui
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -15,13 +16,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.lyon.rhythmictouch.BuildConfig
+import com.lyon.rhythmictouch.R
 import com.lyon.rhythmictouch.RhythmicConstants
 import com.lyon.rhythmictouch.config.ConfigStore
 import com.lyon.rhythmictouch.config.DeviceConfigStore
+import com.lyon.rhythmictouch.config.LocaleHelper
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -31,6 +35,23 @@ import top.yukonga.miuix.kmp.icon.extended.Music
 import top.yukonga.miuix.kmp.icon.extended.Settings
 
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        val lang = LocaleHelper.getSavedLanguage(newBase)
+        if (lang == LocaleHelper.FOLLOW_SYSTEM) {
+            super.attachBaseContext(newBase)
+            return
+        }
+        val locale = when (lang) {
+            LocaleHelper.CHINESE -> java.util.Locale.CHINESE
+            LocaleHelper.ENGLISH -> java.util.Locale.ENGLISH
+            else -> java.util.Locale.getDefault()
+        }
+        val config = android.content.res.Configuration(newBase.resources.configuration)
+        config.setLocale(locale)
+        val wrapped = newBase.createConfigurationContext(config)
+        super.attachBaseContext(wrapped)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -166,25 +187,25 @@ private fun MiuixBottomBar(
             selected = selected == Screen.Monitor,
             onClick = { onSelect(Screen.Monitor) },
             icon = MiuixIcons.Music,
-            label = "监控",
+            label = stringResource(R.string.nav_monitor),
         )
         NavigationBarItem(
             selected = selected == Screen.Config,
             onClick = { onSelect(Screen.Config) },
             icon = MiuixIcons.File,
-            label = "配置",
+            label = stringResource(R.string.nav_config),
         )
         NavigationBarItem(
             selected = selected == Screen.Scope,
             onClick = { onSelect(Screen.Scope) },
             icon = MiuixIcons.GridView,
-            label = "作用域",
+            label = stringResource(R.string.nav_scope),
         )
         NavigationBarItem(
             selected = selected == Screen.Settings,
             onClick = { onSelect(Screen.Settings) },
             icon = MiuixIcons.Settings,
-            label = "设置",
+            label = stringResource(R.string.nav_settings),
         )
     }
 }

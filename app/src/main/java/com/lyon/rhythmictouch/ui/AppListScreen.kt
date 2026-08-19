@@ -36,6 +36,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.ui.res.stringResource
+import com.lyon.rhythmictouch.R
 import com.lyon.rhythmictouch.RhythmicConstants
 import com.lyon.rhythmictouch.config.ConfigStore
 import kotlinx.coroutines.Dispatchers
@@ -135,7 +137,7 @@ fun AppListScreen(
             }
             Toast.makeText(
                 context,
-                if (ok) "已导出作用域配置" else "导出失败",
+                if (ok) context.getString(R.string.toast_export_scope) else context.getString(R.string.toast_export_failed),
                 Toast.LENGTH_SHORT,
             ).show()
         }
@@ -151,7 +153,7 @@ fun AppListScreen(
                 null
             }
             if (bytes == null) {
-                Toast.makeText(context, "读取文件失败", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.toast_read_file_failed), Toast.LENGTH_SHORT).show()
                 return@rememberLauncherForActivityResult
             }
             try {
@@ -168,9 +170,9 @@ fun AppListScreen(
                 config.value = config.value.copy(whitelistMode = whitelist, excludedApps = apps)
                 store.write(config.value)
                 context.sendBroadcast(Intent(RhythmicConstants.ACTION_REFRESH_CONFIG))
-                Toast.makeText(context, "已导入作用域配置", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.toast_import_scope), Toast.LENGTH_SHORT).show()
             } catch (t: Throwable) {
-                Toast.makeText(context, "导入失败：无效的配置文件", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.toast_import_scope_failed), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -180,13 +182,13 @@ fun AppListScreen(
     Scaffold(
         topBar = {
             SmallTopAppBar(
-                title = "作用域",
+                title = stringResource(R.string.screen_scope),
                 navigationIcon = {
                     onBack?.let { back ->
                         IconButton(onClick = back) {
                             Icon(
                                 imageVector = MiuixIcons.Basic.ArrowRight,
-                                contentDescription = "返回",
+                                contentDescription = stringResource(R.string.action_back),
                                 modifier = Modifier.graphicsLayer { scaleX = -1f },
                             )
                         }
@@ -194,12 +196,12 @@ fun AppListScreen(
                 },
                 actions = {
                     IconButton(onClick = { importLauncher.launch("application/json") }) {
-                        Icon(MiuixIcons.Import, contentDescription = "导入")
+                        Icon(MiuixIcons.Import, contentDescription = stringResource(R.string.action_import))
                     }
                     IconButton(onClick = {
                         exportLauncher.launch("RhythmicTouch_scope_$stamp.json")
                     }) {
-                        Icon(MiuixIcons.Backup, contentDescription = "导出")
+                        Icon(MiuixIcons.Backup, contentDescription = stringResource(R.string.action_export))
                     }
                 },
             )
@@ -213,9 +215,9 @@ fun AppListScreen(
         ) {
             top.yukonga.miuix.kmp.basic.Text(
                 text = if (config.value.whitelistMode) {
-                    "白名单模式：仅以下勾选应用会触发振动"
+                    stringResource(R.string.scope_whitelist_hint)
                 } else {
-                    "黑名单模式：以下勾选应用不会触发振动"
+                    stringResource(R.string.scope_blacklist_hint)
                 },
                 color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onBackgroundVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -226,7 +228,7 @@ fun AppListScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                label = "搜索应用",
+                label = stringResource(R.string.label_search_apps),
                 useLabelAsPlaceholder = true,
                 leadingIcon = {
                     Icon(
@@ -237,7 +239,7 @@ fun AppListScreen(
             )
 
             TabRow(
-                listOf("用户应用 (${userApps.size})", "系统应用 (${systemApps.size})"),
+                listOf(stringResource(R.string.tab_user_apps, userApps.size), stringResource(R.string.tab_system_apps, systemApps.size)),
                 tab,
                 { tab = it },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -266,7 +268,7 @@ fun AppListScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 top.yukonga.miuix.kmp.basic.Text(
-                                    text = "没有匹配的应用",
+                                    text = stringResource(R.string.hint_no_matching_apps),
                                     color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onBackgroundVariant,
                                 )
                             }

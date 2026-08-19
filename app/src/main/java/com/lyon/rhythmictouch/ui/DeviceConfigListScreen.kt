@@ -31,8 +31,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lyon.rhythmictouch.R
 import com.lyon.rhythmictouch.RhythmicConstants
 import com.lyon.rhythmictouch.config.DeviceConfigStore
 import com.lyon.rhythmictouch.config.DeviceVibrationConfig
@@ -107,14 +109,14 @@ fun DeviceConfigListScreen(
         built.add(
             existing["speaker"] ?: DeviceVibrationConfig(
                 deviceAddress = "speaker",
-                deviceName = "扬声器",
+                deviceName = activityContext.getString(R.string.device_speaker),
                 deviceType = DeviceVibrationConfig.TYPE_SPEAKER,
             )
         )
         built.add(
             existing["headphone"] ?: DeviceVibrationConfig(
                 deviceAddress = "headphone",
-                deviceName = "耳机孔",
+                deviceName = activityContext.getString(R.string.device_headphone),
                 deviceType = DeviceVibrationConfig.TYPE_HEADPHONE,
             )
         )
@@ -152,12 +154,12 @@ fun DeviceConfigListScreen(
     Scaffold(
         topBar = {
             SmallTopAppBar(
-                title = "设备振动设置",
+                title = stringResource(R.string.screen_device_config),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = MiuixIcons.Basic.ArrowRight,
-                            contentDescription = "返回",
+                            contentDescription = stringResource(R.string.action_back),
                             modifier = Modifier
                                 .size(24.dp)
                                 .graphicsLayer { scaleX = -1f },
@@ -166,10 +168,10 @@ fun DeviceConfigListScreen(
                 },
                 actions = {
                     IconButton(onClick = { importLauncher.launch("*/*") }) {
-                        Icon(MiuixIcons.Import, contentDescription = "导入")
+                        Icon(MiuixIcons.Import, contentDescription = stringResource(R.string.action_import))
                     }
                     IconButton(onClick = { exportLauncher.launch("device_config.json") }) {
-                        Icon(MiuixIcons.Backup, contentDescription = "导出")
+                        Icon(MiuixIcons.Backup, contentDescription = stringResource(R.string.action_export))
                     }
                 },
             )
@@ -240,8 +242,8 @@ private fun DeviceCard(
                     )
                     Text(
                         text = when (device.deviceType) {
-                            DeviceVibrationConfig.TYPE_SPEAKER -> "扬声器"
-                            DeviceVibrationConfig.TYPE_HEADPHONE -> "耳机孔"
+                            DeviceVibrationConfig.TYPE_SPEAKER -> stringResource(R.string.device_speaker)
+                            DeviceVibrationConfig.TYPE_HEADPHONE -> stringResource(R.string.device_headphone)
                             else -> device.deviceAddress
                         },
                         color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
@@ -264,7 +266,7 @@ private fun DeviceCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "振动强度",
+                        text = stringResource(R.string.setting_vibration_intensity),
                         color = MiuixTheme.colorScheme.onSurfaceContainer,
                     )
                     Text(
@@ -287,7 +289,7 @@ private fun DeviceCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "振动延迟",
+                        text = stringResource(R.string.setting_vibration_delay),
                         color = MiuixTheme.colorScheme.onSurfaceContainer,
                     )
                     Text(

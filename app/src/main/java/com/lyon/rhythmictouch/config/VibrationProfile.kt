@@ -1,5 +1,6 @@
 package com.lyon.rhythmictouch.config
 
+import com.lyon.rhythmictouch.R
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -72,15 +73,15 @@ data class VibrationParams(
         const val KEY_EMOTION_PULSE = "emotionPulse"
         const val KEY_SOFT_TICK = "softTick"
 
-        val MODE_LABELS: Map<String, String> = linkedMapOf(
-            KEY_HEAVY_LONG to "重长振",
-            KEY_HEAVY_SHORT to "重短振",
-            KEY_MID_TAP to "中敲击",
-            KEY_MEDIUM_HIT to "中等击打",
-            KEY_RISING_TAP to "上升轻击",
-            KEY_LONG_PULSE to "长脉动",
-            KEY_EMOTION_PULSE to "情感脉动",
-            KEY_SOFT_TICK to "柔和细节",
+        val MODE_LABELS: Map<String, Int> = linkedMapOf(
+            KEY_HEAVY_LONG to R.string.mode_heavy_long,
+            KEY_HEAVY_SHORT to R.string.mode_heavy_short,
+            KEY_MID_TAP to R.string.mode_mid_tap,
+            KEY_MEDIUM_HIT to R.string.mode_medium_hit,
+            KEY_RISING_TAP to R.string.mode_rising_tap,
+            KEY_LONG_PULSE to R.string.mode_long_pulse,
+            KEY_EMOTION_PULSE to R.string.mode_emotion_pulse,
+            KEY_SOFT_TICK to R.string.mode_soft_tick,
         )
 
         val DEFAULT_MODES: Map<String, ModeVibration> = DEFAULT_MODES_MAP

@@ -12,8 +12,8 @@ android {
         applicationId = "com.lyon.rhythmictouch"
         minSdk = 28
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
     }
 
     buildFeatures {
@@ -25,6 +25,12 @@ android {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
             version = "3.22.1"
+        }
+    }
+
+    sourceSets {
+        getByName("main") {
+            assets.srcDir(layout.buildDirectory.dir("generated/daemonAssets"))
         }
     }
 
@@ -80,8 +86,34 @@ android {
 dependencies {
     compileOnly("de.robv.android.xposed:api:82")
 
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
     implementation("top.yukonga.miuix.kmp:miuix-android:0.8.8")
     implementation("top.yukonga.miuix.kmp:miuix-icons:0.8.8")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.activity:activity-compose:1.9.3")
+}
+
+val packageDaemonBinaries by tasks.registering {
+    doLast {
+        val daemonAssets = layout.buildDirectory.dir("generated/daemonAssets/bin").get().asFile
+        layout.buildDirectory.dir("intermediates/cxx").get().asFile.walkTopDown()
+            .filter { it.name == "obj" }
+            .forEach { objDir ->
+                objDir.listFiles()?.forEach { abiDir ->
+                    val abi = abiDir.name
+                    if (abi.startsWith(".")) return@forEach
+                    val destDir = File(daemonAssets, abi).apply { mkdirs() }
+                    listOf("rhythmic_daemon", "librhythmic-hook.so").forEach { name ->
+                        val src = File(abiDir, name)
+                        if (src.exists()) src.copyTo(File(destDir, name), overwrite = true)
+                    }
+                }
+            }
+    }
+}
+
+tasks.whenTaskAdded {
+    if (name.startsWith("merge") && name.endsWith("Assets")) {
+        dependsOn(packageDaemonBinaries)
+    }
 }

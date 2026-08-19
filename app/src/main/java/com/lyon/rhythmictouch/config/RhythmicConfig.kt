@@ -17,6 +17,7 @@ data class RhythmicConfig(
     val deviceConfigs: List<DeviceVibrationConfig> = emptyList(),
     val aaudioIntervalMs: Int = RhythmicConstants.DEFAULT_AAUDIO_INTERVAL_MS,
     val syncAaudioWithAudioTrack: Boolean = RhythmicConstants.DEFAULT_SYNC_AAUDIO_WITH_AUDIOTRACK,
+    val quietPeriods: List<QuietPeriod> = emptyList(),
 ) {
     fun toBundle(): Bundle = Bundle().apply {
         putBoolean(RhythmicConstants.KEY_ENABLED, enabled)
@@ -32,6 +33,7 @@ data class RhythmicConfig(
         putString("device_configs_json", DeviceVibrationConfig.toJson(deviceConfigs))
         putInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, aaudioIntervalMs)
         putBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, syncAaudioWithAudioTrack)
+        putString("quiet_periods_json", QuietPeriod.toJsonList(quietPeriods))
     }
 
     companion object {
@@ -52,6 +54,7 @@ data class RhythmicConfig(
                 deviceConfigs = DeviceVibrationConfig.fromJson(bundle.getString("device_configs_json")),
                 aaudioIntervalMs = bundle.getInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, RhythmicConstants.DEFAULT_AAUDIO_INTERVAL_MS).coerceIn(33, 300),
                 syncAaudioWithAudioTrack = bundle.getBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, RhythmicConstants.DEFAULT_SYNC_AAUDIO_WITH_AUDIOTRACK),
+                quietPeriods = QuietPeriod.fromJsonList(bundle.getString("quiet_periods_json")),
             )
         }
     }

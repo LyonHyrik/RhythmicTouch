@@ -19,6 +19,14 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
         private const val HISTORY_SIZE = 200
         private const val BASELINE_UPDATE_INTERVAL = 30
         private const val MIN_VIBRATE_INTERVAL_MS = 50L
+
+        private val MIHAPTIC_MODES = setOf(
+            VibrationParams.KEY_HEAVY_SHORT,
+            VibrationParams.KEY_MID_TAP,
+            VibrationParams.KEY_MEDIUM_HIT,
+            VibrationParams.KEY_RISING_TAP,
+            VibrationParams.KEY_SOFT_TICK,
+        )
     }
 
     private var lastVibrateMs = 0L
@@ -130,6 +138,28 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
         val dur = modeDur(modeKey)
         val amp = modeAmp(modeKey)
         RhythmicLog.d(TAG, "🧪 [TEST] mode=$modeKey dur=${dur}ms amp=${"%.0f".format(amp * 100)}% delay=${delayMs}ms")
+
+        // Priority: RichTap → MiHaptic → Standard
+        if (RichTapHelper.isAvailable()) {
+            val intensity = (amp * RichTapHelper.getIntensityMultiplier(modeKey)).coerceIn(0.01f, 1.0f)
+            val sharpness = RichTapHelper.getSharpnessForMode(modeKey)
+            val ok = RichTapHelper.playTransient(modeKey, intensity, sharpness)
+            if (ok) {
+                RhythmicLog.d(TAG, "🧪 [TEST-RichTap] mode=$modeKey intensity=${"%.2f".format(intensity)} sharpness=${"%.2f".format(sharpness)}")
+                return
+            }
+        }
+
+        if (MIHAPTIC_MODES.contains(modeKey) && MiHapticHelper.isAvailable()) {
+            val intensity = (amp * MiHapticHelper.getIntensityMultiplier(modeKey)).coerceIn(0.01f, 1.0f)
+            val sharpness = MiHapticHelper.getSharpnessForMode(modeKey)
+            val ok = MiHapticHelper.playTransient(intensity, sharpness)
+            if (ok) {
+                RhythmicLog.d(TAG, "🧪 [TEST-MiHaptic] mode=$modeKey intensity=${"%.2f".format(intensity)} sharpness=${"%.2f".format(sharpness)}")
+                return
+            }
+        }
+
         scheduleVibration(VibrationEffect.createOneShot(dur, (amp * 255).toInt()))
     }
 
@@ -253,7 +283,7 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
                 val dur = modeDur(VibrationParams.KEY_HEAVY_SHORT)
                 val finalAmp = (modeAmp(VibrationParams.KEY_HEAVY_SHORT) * currentIntensity).coerceIn(0.05f, 1.0f)
                 RhythmicLog.d(TAG, "💢 HEAVY-SHORT-HIT (beat+mid) dur=${dur}ms amp=${"%.2f".format(finalAmp)} [intensity=${"%.0f".format(currentIntensity*100)}%] ✓BEAT")
-                vibrateOnce(dur, finalAmp, nowMs)
+                vibrateOnceSmart(VibrationParams.KEY_HEAVY_SHORT, dur, finalAmp, nowMs)
             }
 
             modeEnabled(VibrationParams.KEY_MID_TAP) && analysis.beat && midEnergy > effectiveThresholds[1] * 0.85f && totalEnergy > effectiveThresholds[2] * 0.9f && bandEnergy(bands, VibrationParams.KEY_MID_TAP) > 0.03f -> {
@@ -262,7 +292,7 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
                 RhythmicLog.vibrationFrame = true
                 val finalAmp = (modeAmp(VibrationParams.KEY_MID_TAP) * currentIntensity).coerceIn(0.05f, 1.0f)
                 RhythmicLog.d(TAG, "🎵 MID-TAP (beat+mid) dur=${dur}ms amp=${"%.2f".format(finalAmp)} [intensity=${"%.0f".format(currentIntensity*100)}%] ✓BEAT")
-                vibrateOnce(dur, finalAmp, nowMs)
+                vibrateOnceSmart(VibrationParams.KEY_MID_TAP, dur, finalAmp, nowMs)
             }
 
             modeEnabled(VibrationParams.KEY_MEDIUM_HIT) && analysis.beat && totalEnergy > effectiveThresholds[3] * 1.3f && bandEnergy(bands, VibrationParams.KEY_MEDIUM_HIT) > 0.03f -> {
@@ -271,7 +301,7 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
                 val dur = modeDur(VibrationParams.KEY_MEDIUM_HIT)
                 val finalAmp = (modeAmp(VibrationParams.KEY_MEDIUM_HIT) * currentIntensity).coerceIn(0.05f, 1.0f)
                 RhythmicLog.d(TAG, "⚡ MEDIUM-HIT (beat only) dur=${dur}ms amp=${"%.2f".format(finalAmp)} [intensity=${"%.0f".format(currentIntensity*100)}%] ✓BEAT")
-                vibrateOnce(dur, finalAmp, nowMs)
+                vibrateOnceSmart(VibrationParams.KEY_MEDIUM_HIT, dur, finalAmp, nowMs)
             }
 
             modeEnabled(VibrationParams.KEY_RISING_TAP) && analysis.beat && totalEnergy > effectiveThresholds[2] * 0.9f && isRising && bandEnergy(bands, VibrationParams.KEY_RISING_TAP) > 0.03f -> {
@@ -280,7 +310,7 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
                 val dur = modeDur(VibrationParams.KEY_RISING_TAP)
                 val finalAmp = (modeAmp(VibrationParams.KEY_RISING_TAP) * currentIntensity).coerceIn(0.05f, 1.0f)
                 RhythmicLog.d(TAG, "🎶 RISING-TAP (beat+attack) dur=${dur}ms amp=${"%.2f".format(finalAmp)} [intensity=${"%.0f".format(currentIntensity*100)}%] ✓BEAT")
-                vibrateOnce(dur, finalAmp, nowMs)
+                vibrateOnceSmart(VibrationParams.KEY_RISING_TAP, dur, finalAmp, nowMs)
             }
 
             modeEnabled(VibrationParams.KEY_LONG_PULSE) && !analysis.beat && lowEnergy > effectiveThresholds[0] * 1.3f && (dominantLow || lowAttack > 0.06f) && bandEnergy(bands, VibrationParams.KEY_LONG_PULSE) > 0.03f -> {
@@ -307,7 +337,7 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
                 val dur = modeDur(VibrationParams.KEY_SOFT_TICK)
                 val finalAmp = (modeAmp(VibrationParams.KEY_SOFT_TICK) * currentIntensity).coerceIn(0.05f, 1.0f)
                 RhythmicLog.d(TAG, "✨ SOFT-TICK (sustain light) dur=${dur}ms amp=${"%.2f".format(finalAmp)} [intensity=${"%.0f".format(currentIntensity*100)}%] ○SUSTAIN [gap=${nowMs-lastVibrateMs}ms]")
-                vibrateOnce(dur, finalAmp, nowMs)
+                vibrateOnceSmart(VibrationParams.KEY_SOFT_TICK, dur, finalAmp, nowMs)
             }
 
             else -> {
@@ -414,8 +444,49 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
         )
     }
 
+    private fun vibrateOnceSmart(modeKey: String, durationMs: Long, amplitude: Float, nowMs: Long) {
+        if (nowMs - lastVibrateMs < effectiveMinIntervalMs) return
+
+        // Priority: RichTap → MiHaptic → Standard VibrationEffect
+        if (RichTapHelper.isAvailable()) {
+            val intensity = (amplitude * RichTapHelper.getIntensityMultiplier(modeKey)).coerceIn(0.01f, 1.0f)
+            val sharpness = RichTapHelper.getSharpnessForMode(modeKey)
+            val ok = RichTapHelper.playTransient(modeKey, intensity, sharpness, delayMs)
+            if (ok) {
+                lastVibrateMs = nowMs
+                RhythmicLog.d(TAG, "✨ RichTap → mode=$modeKey intensity=${"%.2f".format(intensity)} sharpness=${"%.2f".format(sharpness)} delay=${delayMs}ms")
+                return
+            }
+        }
+
+        if (MIHAPTIC_MODES.contains(modeKey) && MiHapticHelper.isAvailable()) {
+            val intensity = (amplitude * MiHapticHelper.getIntensityMultiplier(modeKey)).coerceIn(0.01f, 1.0f)
+            val sharpness = MiHapticHelper.getSharpnessForMode(modeKey)
+            val ok = MiHapticHelper.playTransient(intensity, sharpness, delayMs)
+            if (ok) {
+                lastVibrateMs = nowMs
+                RhythmicLog.d(TAG, "🫨 MiHaptic → mode=$modeKey intensity=${"%.2f".format(intensity)} sharpness=${"%.2f".format(sharpness)} delay=${delayMs}ms")
+                return
+            }
+        }
+
+        vibrateOnce(durationMs, amplitude, nowMs)
+    }
+
     private fun vibrateOnce(durationMs: Long, amplitude: Float, nowMs: Long) {
         if (nowMs - lastVibrateMs < effectiveMinIntervalMs) return
+
+        // Try RichTap continuous haptic first
+        if (RichTapHelper.isAvailable()) {
+            val ok = RichTapHelper.playContinuous(durationMs.toInt(), amplitude, 0.5f, delayMs)
+            if (ok) {
+                lastVibrateMs = nowMs
+                RhythmicLog.d(TAG, "✨ RichTap continuous → dur=${durationMs}ms amp=${"%.2f".format(amplitude)} delay=${delayMs}ms")
+                return
+            }
+        }
+
+        // Fallback to standard VibrationEffect
         try {
             scheduleVibration(
                 VibrationEffect.createOneShot(

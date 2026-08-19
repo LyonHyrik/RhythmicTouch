@@ -5,6 +5,7 @@ import de.robv.android.xposed.XposedBridge
 
 class OboeBridge {
 
+    @Volatile
     var fftListener: ((ByteArray, Int) -> Unit)? = null
 
     @Volatile
@@ -64,11 +65,38 @@ class OboeBridge {
         frameCount++
         if (nativeRate > 0) sampleRate = nativeRate
 
-        if (frameCount <= 5 || frameCount % 500L == 0L) {
-            val nonZero = pcmData.count { it.toInt() != 0 }
-            val first5 = pcmData.take(10).toList()
-            XposedBridge.log("[RhythmicTouch-Oboe] 📥 PCM frame#$frameCount: size=${pcmData.size}, nonZero=$nonZero/${pcmData.size}, nativeRate=$nativeRate, first10=$first5")
+        if (frameCount <= 3 || frameCount % 2000L == 0L) {
+            XposedBridge.log("[RhythmicTouch-Oboe] 📥 PCM frame#$frameCount: size=${pcmData.size}, rate=$nativeRate")
         }
+
+        var frameEnergy = 0L
+        for (s in pcmData) {
+            frameEnergy += s.toLong() * s.toLong()
+        }
+        val avgEnergy = frameEnergy / pcmData.size.coerceAtLeast(1)
+
+        peakEnergy = maxOf(peakEnergy * PEAK_DECAY, avgEnergy.toDouble())
+
+        val noiseFloor = peakEnergy * SILENCE_RATIO
+        val isSilent = avgEnergy < noiseFloor && frameCount > WARMUP_FRAMES
+
+        if (isSilent) {
+            silenceFrames++
+            if (silenceFrames > MAX_SILENCE_FRAMES) {
+                ringHead = 0
+                ringFill = 0
+                ring.fill(0)
+                peakEnergy *= 0.1
+            }
+            return
+        }
+
+        if (silenceFrames > 0) {
+            ringHead = 0
+            ringFill = 0
+            ring.fill(0)
+        }
+        silenceFrames = 0
 
         for (s in pcmData) {
             ring[ringHead] = s
@@ -83,15 +111,10 @@ class OboeBridge {
 
         val fft = performFixedFFT()
         if (fft != null && fft.isNotEmpty()) {
-            if (frameCount % 500L == 0L) {
-                val avgLevel = fft.map { it.toInt() }.average()
-                XposedBridge.log("[RhythmicTouch-Oboe] 📊✅ FIXED FFT: ${fft.size} bytes, avg=$avgLevel")
-            }
-
             try {
                 fftListener?.invoke(fft, sampleRate)
             } catch (ex: Exception) {
-                if (frameCount % 1000L == 0L) {
+                if (frameCount % 2000L == 0L) {
                     XposedBridge.log("[RhythmicTouch-Oboe] ❌ fftListener error: ${ex.message}")
                 }
             }
@@ -99,9 +122,13 @@ class OboeBridge {
     }
 
     private val ring = ShortArray(RING_CAPACITY)
+    @Volatile
     private var ringHead = 0
+    @Volatile
     private var ringFill = 0
     private var lastFftMs = 0L
+    private var silenceFrames = 0
+    private var peakEnergy = 0.0
 
     // Raw complex FFT output, byte layout identical to Android Visualizer FFT:
     // [re0, im0, re1, im1, ..., re511, im511] for 512 bins.
@@ -119,13 +146,6 @@ class OboeBridge {
                 idx++
                 if (idx >= RING_CAPACITY) idx = 0
                 real[i] = (l + r) / 65536.0f
-            }
-
-            if (frameCount % 500L == 0L) {
-                val nonZeroInput = real.count { it != 0f }
-                val maxInput = real.maxOrNull() ?: 0f
-                val first5Input = real.take(5).map { "%.6f".format(it) }
-                XposedBridge.log("[RhythmicTouch-Oboe] 🔍 FFT INPUT: ringFill=$ringFill, nonZero=$nonZeroInput/${FFT_SAMPLES}, maxInput=$maxInput, first5=$first5Input")
             }
 
             val imag = FloatArray(FFT_SAMPLES)
@@ -202,6 +222,10 @@ class OboeBridge {
         private const val OUTPUT_BINS = 512
         private const val RING_CAPACITY = 8192
         private const val FFTS_SCALE = 0.25f
+        private const val PEAK_DECAY = 0.995
+        private const val SILENCE_RATIO = 0.02
+        private const val MAX_SILENCE_FRAMES = 30
+        private const val WARMUP_FRAMES = 20
 
         init {
             try {

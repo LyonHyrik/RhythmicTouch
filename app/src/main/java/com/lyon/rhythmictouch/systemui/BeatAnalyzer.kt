@@ -51,6 +51,7 @@ class BeatAnalyzer {
     private var prevBands = FloatArray(NUM_BANDS)
     private var avgBands = FloatArray(NUM_BANDS)
     private var lastBeatMs = 0L
+    private var silenceCount = 0
 
     private val bandEdges = FloatArray(NUM_BANDS + 1)
 
@@ -73,6 +74,13 @@ class BeatAnalyzer {
             freqPerBin = if (n > 0 && rateHz > 0) (rateHz.toFloat()) / (2 * n) else 0f
         }
         if (n < 2 || freqPerBin <= 0) return AnalysisResult(0f, FloatArray(NUM_BANDS))
+
+        var totalEnergy = 0.0
+        for (k in 1 until n) {
+            val re = fft[k * 2].toDouble()
+            val im = fft[k * 2 + 1].toDouble()
+            totalEnergy += re * re + im * im
+        }
 
         val bands = FloatArray(NUM_BANDS)
         var totalMag = 0.0

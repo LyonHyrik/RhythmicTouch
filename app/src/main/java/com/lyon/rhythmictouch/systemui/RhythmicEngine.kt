@@ -71,6 +71,7 @@ class RhythmicEngine(context: Context) {
         LiveState.engineActive = cap.startDefault()
         log("capturer started, engineActive=${LiveState.engineActive}, samplingRate=${cap.samplingRate}, captureSize=${cap.captureSize}")
         configBridge.refresh(force = true)
+        DaemonManager.start(appContext)
         driver.calibrate(appContext) { minMs ->
             try {
                 val bundle = android.os.Bundle().apply { putLong("vibrator_min_ms", minMs) }
@@ -99,6 +100,7 @@ class RhythmicEngine(context: Context) {
                 }
 
                 activeTracker.refresh()
+                activeTracker.daemonUids = DaemonManager.refresh()
                 val session = activeTracker.primarySessionId()
                 val needRetry = attachFailed && now - lastAttachTryMs >= ATTACH_RETRY_MS
                 
@@ -243,6 +245,8 @@ class RhythmicEngine(context: Context) {
             config.profiles.firstOrNull { it.scopeApps.isNotEmpty() && foregroundApp in it.scopeApps }
         } else null
         val effectiveParams = matchedProfile?.params ?: config.vibrationParams
+        val allScopeApps = config.profiles.filter { it.scopeApps.isNotEmpty() }.flatMap { it.scopeApps }.toSet()
+        val effectiveScopeApps = allScopeApps.ifEmpty { config.excludedApps }
 
         driver.updateParams(effectiveParams)
         val deviceAddr = getCurrentOutputDeviceAddress()
@@ -250,9 +254,17 @@ class RhythmicEngine(context: Context) {
         val effectiveIntensity = deviceOverride?.first ?: config.intensity
         val effectiveDelay = deviceOverride?.second ?: config.vibrationDelay
         driver.updateDelayMs(effectiveDelay.toLong())
-        val blocked = !config.enabled || activeTracker.isBlocked(config.whitelistMode, config.excludedApps)
+        val blocked = !config.enabled || activeTracker.isBlocked(config.whitelistMode, effectiveScopeApps) || config.quietPeriods.any { it.isActiveNow() }
 
-        log("🔍 DEBUG: enabled=${config.enabled}, whitelistMode=${config.whitelistMode}, scopeApps=${config.excludedApps}, isBlocked=${activeTracker.isBlocked(config.whitelistMode, config.excludedApps)}, blocked=$blocked, level=${"%.2f".format(result.level)}, foreground=$foregroundApp, matchedProfile=${matchedProfile?.name ?: "默认"}")
+        val triggeredToday = config.quietPeriods.filter { !it.repeatDaily && it.isActiveNow() && it.lastTriggeredDate != todayString() }
+        if (triggeredToday.isNotEmpty()) {
+            val updated = config.copy(quietPeriods = config.quietPeriods.map { q ->
+                if (triggeredToday.any { it.id == q.id }) q.markTriggered() else q
+            })
+            configBridge.writeCache(updated)
+        }
+
+        log("🔍 DEBUG: enabled=${config.enabled}, whitelistMode=${config.whitelistMode}, scopeApps=$effectiveScopeApps, isBlocked=${activeTracker.isBlocked(config.whitelistMode, effectiveScopeApps)}, quiet=${config.quietPeriods.any { it.isActiveNow() }}, blocked=$blocked, level=${"%.2f".format(result.level)}, foreground=$foregroundApp, matchedProfile=${matchedProfile?.name ?: "默认"}")
         
         if (blocked) {
             log("❌ VIBRATION BLOCKED! driver.stop() called")
@@ -310,6 +322,11 @@ class RhythmicEngine(context: Context) {
 
     private fun log(msg: String) {
         RhythmicLog.x(TAG, msg)
+    }
+
+    private fun todayString(): String {
+        val now = java.util.Calendar.getInstance()
+        return "%04d-%02d-%02d".format(now.get(java.util.Calendar.YEAR), now.get(java.util.Calendar.MONTH) + 1, now.get(java.util.Calendar.DAY_OF_MONTH))
     }
 
     private companion object {

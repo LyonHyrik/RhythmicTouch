@@ -92,12 +92,13 @@ static void* g_origUserData = nullptr;
 static std::atomic<bool> g_callbackModeActive{false};
 
 static constexpr int kChannelCount = 2;
-static constexpr int kRingFrames = 8192;
+static constexpr int kRingFrames = 32768;
 static constexpr int kRingFloats = kRingFrames * kChannelCount;
 
 static float g_ring[kRingFloats];
 static std::atomic<int> g_writeIndex{0};
 static std::atomic<int> g_readIndex{0};
+static std::atomic<long> g_overflowCount{0};
 
 static JavaVM* g_jvm = nullptr;
 static jobject g_bridgeRef = nullptr;
@@ -117,6 +118,12 @@ static inline void pushStereoFloat(const float* stereo, int numFrames) {
     int space = kRingFloats - 1 - occupied;
     int spaceFrames = space / kChannelCount;
     int n = numFrames < spaceFrames ? numFrames : spaceFrames;
+    if (n < numFrames) {
+        long ov = g_overflowCount.fetch_add(1);
+        if (ov < 10 || ov % 500 == 0) {
+            LOGW("⚠️ Ring buffer overflow #%ld: dropping %d/%d frames (occupied=%d)", ov, numFrames - n, numFrames, occupied);
+        }
+    }
     for (int f = 0; f < n; ++f) {
         g_ring[write] = stereo[f * 2];
         g_ring[write + 1] = stereo[f * 2 + 1];
@@ -457,55 +464,43 @@ static void* drain_thread_func(void*) {
     }
     LOGI("✅ Drain thread attached to JVM successfully");
 
-    jshortArray scratch = env->NewShortArray(kRingFloats);
-    jshort* scratchBuf = scratch ? env->GetShortArrayElements(scratch, nullptr) : nullptr;
+    jshortArray out = env->NewShortArray(kRingFloats);
+    jshort* outBuf = out ? env->GetShortArrayElements(out, nullptr) : nullptr;
 
     while (g_drainRunning.load(std::memory_order_relaxed)) {
         int iterNum = g_drainIterations.fetch_add(1);
         
-        if (iterNum > 0 && iterNum % 1000 == 0) {
-            LOGI("🔄 Drain iteration #%d: total frames sent=%ld", 
-                 iterNum, g_totalJniFramesSent.load());
+        if (iterNum > 0 && iterNum % 5000 == 0) {
+            LOGI("🔄 Drain #%d: total sent=%ld, overflow=%ld", 
+                 iterNum, g_totalJniFramesSent.load(), g_overflowCount.load());
         }
         
-        if (scratchBuf && g_bridgeRef && g_onOboeAudioFrame) {
+        if (outBuf && g_bridgeRef && g_onOboeAudioFrame) {
             int read = g_readIndex.load(std::memory_order_acquire);
             int write = g_writeIndex.load(std::memory_order_acquire);
             int avail = (write - read + kRingFloats) % kRingFloats;
             
-            if (avail >= kChannelCount && iterNum < 20) {
-                LOGI("💧 Drain #%d: %d samples available in ring buffer", iterNum, avail);
-            }
-            
             if (avail >= kChannelCount) {
                 int count = 0;
                 while (count + kChannelCount <= avail) {
-                    float l = g_ring[read];
-                    int ridx = read + 1;
-                    if (ridx >= kRingFloats) ridx = 0;
-                    float r = g_ring[ridx];
-                    scratchBuf[count++] = f32_to_s16(l);
-                    scratchBuf[count++] = f32_to_s16(r);
+                    outBuf[count]     = f32_to_s16(g_ring[read]);
+                    outBuf[count + 1] = f32_to_s16(g_ring[read + 1]);
+                    count += 2;
                     read += kChannelCount;
                     if (read >= kRingFloats) read = 0;
                 }
                 g_readIndex.store(read, std::memory_order_release);
 
-                jshortArray out = env->NewShortArray(count);
-                if (out) {
-                    env->SetShortArrayRegion(out, 0, count, scratchBuf);
-                    
-                    if (iterNum < 10 || (iterNum > 0 && iterNum % 500 == 0)) {
-                        LOGI("📤 Calling onOboeAudioFrame with %d samples (%ld total)", 
-                             count, g_totalJniFramesSent.load());
-                    }
-                    
-                    env->CallVoidMethod(g_bridgeRef, g_onOboeAudioFrame, out,
-                                        static_cast<jint>(g_sampleRate.load(std::memory_order_relaxed)));
-                    g_totalJniFramesSent.fetch_add(count / 2);
-                    
-                    env->DeleteLocalRef(out);
-                }
+                env->ReleaseShortArrayElements(out, outBuf, JNI_ABORT);
+
+                jshortArray sized = env->NewShortArray(count);
+                env->SetShortArrayRegion(sized, 0, count, outBuf);
+                env->CallVoidMethod(g_bridgeRef, g_onOboeAudioFrame, sized,
+                                    static_cast<jint>(g_sampleRate.load(std::memory_order_relaxed)));
+                env->DeleteLocalRef(sized);
+                g_totalJniFramesSent.fetch_add(count / 2);
+                outBuf = env->GetShortArrayElements(out, nullptr);
+
                 if (env->ExceptionCheck()) env->ExceptionClear();
             }
         }
@@ -513,9 +508,9 @@ static void* drain_thread_func(void*) {
         nanosleep(&ts, nullptr);
     }
 
-    if (scratch) {
-        if (scratchBuf) env->ReleaseShortArrayElements(scratch, scratchBuf, JNI_ABORT);
-        env->DeleteLocalRef(scratch);
+    if (out) {
+        if (outBuf) env->ReleaseShortArrayElements(out, outBuf, JNI_ABORT);
+        env->DeleteLocalRef(out);
     }
     g_jvm->DetachCurrentThread();
     return nullptr;

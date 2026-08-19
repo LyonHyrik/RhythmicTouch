@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RhythmicTouch</string>
+
+    <!-- Bottom nav -->
+    <string name="nav_monitor">Monitor</string>
+    <string name="nav_config">Config</string>
+    <string name="nav_scope">Scope</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Common -->
+    <string name="action_back">Back</string>
+    <string name="action_save">Save</string>
+    <string name="action_import">Import</string>
+    <string name="action_export">Export</string>
+    <string name="action_add">Add</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_close">Close</string>
+    <string name="label_search">Search</string>
+    <string name="label_none">None</string>
+
+    <!-- Monitor -->
+    <string name="section_audio_detection">Audio Detection</string>
+    <string name="mode_quiet">Quiet</string>
+    <string name="status_module_not_running">Module not running</string>
+    <string name="status_vibration_blocked">Vibration blocked</string>
+    <string name="status_detecting">Detecting (%d bands)</string>
+    <string name="label_peak">Peak: #%1$d [%2$d-%3$dHz]</string>
+    <string name="label_no_data">No data</string>
+    <string name="section_active_bands">Active Bands</string>
+    <string name="label_no_active_bands">None</string>
+    <string name="label_now_playing">Playing: %s</string>
+    <string name="label_no_app_playing">No app playing</string>
+    <string name="section_vibration_mode_monitor">Vibration Mode Monitor</string>
+
+    <!-- Vibration mode titles -->
+    <string name="mode_heavy_long">Heavy Long</string>
+    <string name="mode_heavy_long_desc">Strong bass beat</string>
+    <string name="mode_heavy_short">Heavy Short</string>
+    <string name="mode_heavy_short_desc">Mid-heavy hit</string>
+    <string name="mode_medium_hit">Medium Hit</string>
+    <string name="mode_medium_hit_desc">Normal beat</string>
+    <string name="mode_long_pulse">Long Pulse</string>
+    <string name="mode_long_pulse_desc">Sustained bass</string>
+    <string name="mode_mid_tap">Mid Tap</string>
+    <string name="mode_mid_tap_desc">Prominent mids</string>
+    <string name="mode_rising_tap">Rising Tap</string>
+    <string name="mode_rising_tap_desc">Note onset</string>
+    <string name="mode_soft_tick">Soft Detail</string>
+    <string name="mode_soft_tick_desc">Subtle detail</string>
+    <string name="mode_quiet_title">Quiet</string>
+    <string name="mode_quiet_desc">No vibration</string>
+    <string name="mode_emotion_pulse">Emotion Pulse</string>
+    <string name="mode_emotion_pulse_desc">Sustained wave</string>
+
+    <!-- Hook version banner -->
+    <string name="hook_version_mismatch">Module version mismatch</string>
+    <string name="hook_restart_hint">Restart SystemUI to apply update</string>
+    <string name="hook_restart_hint_restarting">Restarting SystemUI…</string>
+    <string name="action_restart_systemui">Restart SystemUI</string>
+
+    <!-- Config screen -->
+    <string name="screen_config">Config</string>
+    <string name="section_profiles">Profiles</string>
+    <string name="hint_profile_list">Tap to activate · Long press to edit</string>
+    <string name="profile_default_summary">Built-in default · Long press to view</string>
+    <string name="profile_scoped_active">%1$d scoped apps · Active</string>
+    <string name="profile_scoped_inactive">%1$d scoped apps · Long press to edit</string>
+    <string name="profile_global_active">Global · Active · Long press to edit</string>
+    <string name="profile_global_inactive">Tap to activate · Long press to edit</string>
+    <string name="action_new_profile">New Profile</string>
+    <string name="action_batch_export">Batch Export</string>
+    <string name="screen_profile_edit">Edit Profile</string>
+    <string name="screen_profile_new">New Profile</string>
+    <string name="profile_readonly_suffix">(Read-only)</string>
+    <string name="hint_profile_readonly">Built-in default profile, view only</string>
+    <string name="hint_profile_editable">Drag sliders to apply in real-time</string>
+    <string name="label_profile_name">Profile Name</string>
+    <string name="label_profile_name_default">Unnamed Profile</string>
+    <string name="section_profile_scope">Profile Scope</string>
+    <string name="scope_global_desc">Global profile · No scope restriction</string>
+    <string name="scope_scoped_desc">Auto-activates when matching app is running</string>
+    <string name="label_amplitude">Amplitude</string>
+    <string name="label_duration">Duration</string>
+    <string name="action_collapse_bands">Collapse Band Settings ▲</string>
+    <string name="label_all_bands">All Bands</string>
+    <string name="label_selected_bands">%d bands selected</string>
+    <string name="label_band_mode">Mode:</string>
+    <string name="band_mode_range">Range</string>
+    <string name="band_mode_individual">Individual</string>
+    <string name="label_start_band">Start</string>
+    <string name="label_end_band">End</string>
+    <string name="section_scope_apps">Select Apps</string>
+    <string name="label_add_app">Add</string>
+    <string name="link_add_apps">Add Apps</string>
+    <string name="link_add_more_apps">Add More</string>
+
+    <!-- Scope / AppList -->
+    <string name="screen_scope">Scope</string>
+    <string name="scope_whitelist_hint">Whitelist: Only checked apps trigger vibration</string>
+    <string name="scope_blacklist_hint">Blacklist: Checked apps will not trigger vibration</string>
+    <string name="label_search_apps">Search apps</string>
+    <string name="tab_user_apps">User Apps (%d)</string>
+    <string name="tab_system_apps">System Apps (%d)</string>
+    <string name="hint_no_matching_apps">No matching apps</string>
+
+    <!-- Settings -->
+    <string name="screen_settings">Settings</string>
+    <string name="setting_rhythmic_touch">Rhythmic Touch</string>
+    <string name="setting_rhythmic_touch_desc">Capture music rhythm from global audio stream and trigger vibration. May increase power consumption.</string>
+    <string name="setting_whitelist_mode">Scope Whitelist Mode</string>
+    <string name="setting_whitelist_on">Whitelist: Only scoped apps trigger vibration</string>
+    <string name="setting_whitelist_off">Blacklist: Scoped apps will not trigger vibration</string>
+    <string name="setting_monet">Global Monet Theming</string>
+    <string name="setting_monet_desc">Use system Material You dynamic colors</string>
+    <string name="setting_vibration_intensity">Vibration Intensity</string>
+    <string name="setting_vibration_delay">Vibration Delay</string>
+    <string name="setting_delay_desc">Adjust delay to sync with audio. Useful for Bluetooth headphones with latency.</string>
+    <string name="setting_device_config">Device Vibration Settings</string>
+    <string name="setting_device_config_desc">Configure vibration intensity and delay per device</string>
+    <string name="section_audio_sync">Audio Sync</string>
+    <string name="setting_aaudio_interval">AAudio Send Interval</string>
+    <string name="label_waiting_detect">Waiting for detection…</string>
+    <string name="setting_sync_auto_desc">Detect AudioTrack data rate and apply in real-time</string>
+    <string name="setting_sync_manual_desc">Set AAudio data send interval (lower = faster response, more power)</string>
+    <string name="setting_auto_sync">Auto Sync AudioTrack Rate</string>
+    <string name="setting_auto_sync_desc">Auto-detect AudioTrack data rate and apply to AAudio in real-time</string>
+    <string name="section_log">Logging</string>
+    <string name="setting_log_mode">Log Output Mode</string>
+    <string name="log_mode_all">All</string>
+    <string name="log_mode_vibrate">On Vibration</string>
+    <string name="log_mode_none">None</string>
+    <string name="log_mode_all_desc">Output all debug logs</string>
+    <string name="log_mode_vibrate_desc">Only output logs when vibration occurs</string>
+    <string name="log_mode_none_desc">No log output</string>
+    <string name="section_system">System</string>
+    <string name="setting_restart_systemui">Restart SystemUI</string>
+    <string name="setting_restart_desc">Only try if config doesn\'t take effect. Most settings apply in real-time.</string>
+    <string name="setting_restart_restarting">Restarting SystemUI…</string>
+    <string name="setting_quiet_periods">Quiet Periods</string>
+    <string name="quiet_not_set">Not set</string>
+    <string name="quiet_active_count">%d periods active</string>
+    <string name="setting_about">About</string>
+
+    <!-- Device Config -->
+    <string name="screen_device_config">Device Vibration Settings</string>
+    <string name="device_speaker">Speaker</string>
+    <string name="device_headphone">Headphone</string>
+
+    <!-- Quiet Periods -->
+    <string name="screen_quiet_periods">Quiet Periods</string>
+    <string name="section_current_periods">Current Periods</string>
+    <string name="hint_no_quiet_periods">No quiet periods</string>
+    <string name="quiet_repeat_daily">Daily</string>
+    <string name="quiet_once">Once</string>
+    <string name="screen_add_period">Add Period</string>
+    <string name="screen_edit_period">Edit Period</string>
+    <string name="label_period_name">Name (optional)</string>
+    <string name="hint_period_name">e.g. Night Mode</string>
+    <string name="label_start_time">Start Time</string>
+    <string name="label_end_time">End Time</string>
+    <string name="section_options">Options</string>
+    <string name="label_repeat_daily">Repeat Daily</string>
+    <string name="section_import_export">Import / Export</string>
+
+    <!-- About -->
+    <string name="screen_about">About</string>
+    <string name="app_subtitle">RhythmicTouch · LSPosed Module</string>
+    <string name="app_description">Captures music rhythm from the system audio stream and triggers vibration, letting the motor dance to the music. Supports per-app scope control.</string>
+    <string name="section_author">Author</string>
+    <string name="section_contributors">Contributors</string>
+    <string name="section_contact">Contact</string>
+    <string name="label_blog">Blog</string>
+    <string name="label_coolapk">CoolAPK</string>
+    <string name="label_github">Source Code</string>
+    <string name="label_check_update">Check for Updates</string>
+    <string name="label_check_update_desc">Check if a new version is available</string>
+    <string name="label_contributions">%d contributions</string>
+    <string name="label_developer">Developer · %s</string>
+    <string name="label_developer_only">Developer</string>
+    <string name="content_app_icon">App icon</string>
+    <string name="content_avatar">Author avatar</string>
+
+    <!-- Update -->
+    <string name="screen_update">Check for Updates</string>
+    <string name="update_checking">Checking for updates…</string>
+    <string name="update_failed">Check failed. Please check your network and try again.</string>
+    <string name="update_available">New version v%s available</string>
+    <string name="update_current">Current version v%s</string>
+    <string name="section_changelog">Changelog</string>
+    <string name="action_download_browser">Open in Browser to Download</string>
+    <string name="update_up_to_date">Already up to date v%s</string>
+
+    <!-- Toast messages -->
+    <string name="toast_browser_error">Unable to open browser</string>
+    <string name="toast_open_link_error">Unable to open link</string>
+    <string name="toast_exported_single">Exported %s.json</string>
+    <string name="toast_export_failed">Export failed</string>
+    <string name="toast_exported_batch">Exported config package as zip</string>
+    <string name="toast_imported_count">Imported %d profiles</string>
+    <string name="toast_import_none">No importable profiles found</string>
+    <string name="toast_no_custom_profiles">No custom profiles to export</string>
+    <string name="toast_export_scope">Scope config exported</string>
+    <string name="toast_read_file_failed">Failed to read file</string>
+    <string name="toast_import_scope">Scope config imported</string>
+    <string name="toast_import_scope_failed">Import failed: Invalid config file</string>
+    <string name="label_expand_bands">Band Settings ▼ · </string>
+    <string name="label_band_range">Range #%1$d(%2$s) - #%3$d(%4$s)</string>
+    <string name="label_auto">Auto</string>
+    <string name="setting_language">Language</string>
+    <string name="language_system">Follow System</string>
+</resources>

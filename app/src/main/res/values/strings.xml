@@ -1,4 +1,212 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">RhythmicTouch</string>
+
+    <!-- Bottom nav -->
+    <string name="nav_monitor">监控</string>
+    <string name="nav_config">配置</string>
+    <string name="nav_scope">作用域</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- Common -->
+    <string name="action_back">返回</string>
+    <string name="action_save">保存</string>
+    <string name="action_import">导入</string>
+    <string name="action_export">导出</string>
+    <string name="action_add">添加</string>
+    <string name="action_delete">删除</string>
+    <string name="action_close">关闭</string>
+    <string name="label_search">搜索</string>
+    <string name="label_none">无</string>
+
+    <!-- Monitor -->
+    <string name="section_audio_detection">音频检测</string>
+    <string name="mode_quiet">安静</string>
+    <string name="status_module_not_running">模块未运行</string>
+    <string name="status_vibration_blocked">已屏蔽振动</string>
+    <string name="status_detecting">检测中（%d 频段）</string>
+    <string name="label_peak">峰值：#%1$d [%2$d-%3$dHz]</string>
+    <string name="label_no_data">无数据</string>
+    <string name="section_active_bands">活跃频段</string>
+    <string name="label_no_active_bands">无</string>
+    <string name="label_now_playing">当前播放: %s</string>
+    <string name="label_no_app_playing">当前无应用在播放</string>
+    <string name="section_vibration_mode_monitor">振动模式监控</string>
+
+    <!-- Vibration mode titles -->
+    <string name="mode_heavy_long">重长振</string>
+    <string name="mode_heavy_long_desc">强低音节拍</string>
+    <string name="mode_heavy_short">重短振</string>
+    <string name="mode_heavy_short_desc">中频重击</string>
+    <string name="mode_medium_hit">中等击打</string>
+    <string name="mode_medium_hit_desc">普通节拍</string>
+    <string name="mode_long_pulse">长脉动</string>
+    <string name="mode_long_pulse_desc">持续低频</string>
+    <string name="mode_mid_tap">中敲击</string>
+    <string name="mode_mid_tap_desc">中频突出</string>
+    <string name="mode_rising_tap">上升轻击</string>
+    <string name="mode_rising_tap_desc">音符起始</string>
+    <string name="mode_soft_tick">柔和细节</string>
+    <string name="mode_soft_tick_desc">轻微细节</string>
+    <string name="mode_quiet_title">安静</string>
+    <string name="mode_quiet_desc">无振动</string>
+    <string name="mode_emotion_pulse">情感脉动</string>
+    <string name="mode_emotion_pulse_desc">持续波动</string>
+
+    <!-- Hook version banner -->
+    <string name="hook_version_mismatch">模块版本不一致</string>
+    <string name="hook_restart_hint">请重启 SystemUI 使更新生效</string>
+    <string name="hook_restart_hint_restarting">正在重启 SystemUI…</string>
+    <string name="action_restart_systemui">重启 SystemUI</string>
+
+    <!-- Config screen -->
+    <string name="screen_config">配置</string>
+    <string name="section_profiles">配置文件</string>
+    <string name="hint_profile_list">点击配置即可切换启用 · 长按进入参数修改</string>
+    <string name="profile_default_summary">内置默认 · 长按查看</string>
+    <string name="profile_scoped_active">作用域 %1$d 个应用 · 当前生效</string>
+    <string name="profile_scoped_inactive">作用域 %1$d 个应用 · 长按修改</string>
+    <string name="profile_global_active">全局配置 · 当前生效 · 长按修改</string>
+    <string name="profile_global_inactive">点击启用 · 长按修改</string>
+    <string name="action_new_profile">新建配置</string>
+    <string name="action_batch_export">批量导出</string>
+    <string name="screen_profile_edit">编辑配置</string>
+    <string name="screen_profile_new">新建配置</string>
+    <string name="profile_readonly_suffix">(只读)</string>
+    <string name="hint_profile_readonly">此配置为内置默认，仅可查看</string>
+    <string name="hint_profile_editable">拖动滑块实时生效，无需重启</string>
+    <string name="label_profile_name">配置名称</string>
+    <string name="label_profile_name_default">未命名配置</string>
+    <string name="section_profile_scope">配置文件作用域</string>
+    <string name="scope_global_desc">全局配置 · 无作用域限制</string>
+    <string name="scope_scoped_desc">匹配到对应软件时自动激活此配置</string>
+    <string name="label_amplitude">振幅</string>
+    <string name="label_duration">时长</string>
+    <string name="action_collapse_bands">收起频段设置 ▲</string>
+    <string name="label_all_bands">全频段</string>
+    <string name="label_selected_bands">已选 %d 个频段</string>
+    <string name="label_band_mode">模式:</string>
+    <string name="band_mode_range">范围</string>
+    <string name="band_mode_individual">频段</string>
+    <string name="label_start_band">起始</string>
+    <string name="label_end_band">结束</string>
+    <string name="section_scope_apps">选择应用</string>
+    <string name="label_add_app">添加</string>
+    <string name="link_add_apps">添加应用</string>
+    <string name="link_add_more_apps">继续添加</string>
+
+    <!-- Scope / AppList -->
+    <string name="screen_scope">作用域</string>
+    <string name="scope_whitelist_hint">白名单模式：仅以下勾选应用会触发振动</string>
+    <string name="scope_blacklist_hint">黑名单模式：以下勾选应用不会触发振动</string>
+    <string name="label_search_apps">搜索应用</string>
+    <string name="tab_user_apps">用户应用 (%d)</string>
+    <string name="tab_system_apps">系统应用 (%d)</string>
+    <string name="hint_no_matching_apps">没有匹配的应用</string>
+
+    <!-- Settings -->
+    <string name="screen_settings">设置</string>
+    <string name="setting_rhythmic_touch">音律触感</string>
+    <string name="setting_rhythmic_touch_desc">从系统全局音频流中捕捉音乐节奏并触发振动，可能增加功耗与系统占用</string>
+    <string name="setting_whitelist_mode">作用域白名单模式</string>
+    <string name="setting_whitelist_on">白名单：仅作用域中的应用触发振动</string>
+    <string name="setting_whitelist_off">黑名单：作用域中的应用不触发振动</string>
+    <string name="setting_monet">全局莫奈取色</string>
+    <string name="setting_monet_desc">使用系统 Material You 动态取色</string>
+    <string name="setting_vibration_intensity">振动强度</string>
+    <string name="setting_vibration_delay">振动延迟</string>
+    <string name="setting_delay_desc">调整跟随振动的延迟，部分蓝牙耳机有延迟时可设置以对齐节拍</string>
+    <string name="setting_device_config">设备振动设置</string>
+    <string name="setting_device_config_desc">为不同设备单独设置振动强度和延迟</string>
+    <string name="section_audio_sync">音频同步</string>
+    <string name="setting_aaudio_interval">AAudio 发送间隔</string>
+    <string name="label_waiting_detect">等待检测…</string>
+    <string name="setting_sync_auto_desc">检测 AudioTrack 数据发送速率并实时应用</string>
+    <string name="setting_sync_manual_desc">设置 AAudio 数据的发送间隔（越小响应越快，但功耗越高）</string>
+    <string name="setting_auto_sync">自动同步 AudioTrack 速率</string>
+    <string name="setting_auto_sync_desc">自动检测 AudioTrack 数据发送速率并实时应用到 AAudio</string>
+    <string name="section_log">日志</string>
+    <string name="setting_log_mode">日志输出模式</string>
+    <string name="log_mode_all">全部输出</string>
+    <string name="log_mode_vibrate">震动时输出</string>
+    <string name="log_mode_none">不输出</string>
+    <string name="log_mode_all_desc">输出全部调试日志</string>
+    <string name="log_mode_vibrate_desc">仅在发生振动时输出日志</string>
+    <string name="log_mode_none_desc">不输出任何日志</string>
+    <string name="section_system">系统</string>
+    <string name="setting_restart_systemui">重启SystemUI</string>
+    <string name="setting_restart_desc">仅在配置不生效时尝试，应用大部分配置都是实时生效的</string>
+    <string name="setting_restart_restarting">正在重启 SystemUI…</string>
+    <string name="setting_quiet_periods">静默时段</string>
+    <string name="quiet_not_set">未设置</string>
+    <string name="quiet_active_count">%d 个时段生效中</string>
+    <string name="setting_about">关于</string>
+
+    <!-- Device Config -->
+    <string name="screen_device_config">设备振动设置</string>
+    <string name="device_speaker">扬声器</string>
+    <string name="device_headphone">耳机孔</string>
+
+    <!-- Quiet Periods -->
+    <string name="screen_quiet_periods">静默时段</string>
+    <string name="section_current_periods">当前时段</string>
+    <string name="hint_no_quiet_periods">暂无静默时段</string>
+    <string name="quiet_repeat_daily">每天</string>
+    <string name="quiet_once">仅一次</string>
+    <string name="screen_add_period">添加时段</string>
+    <string name="screen_edit_period">编辑时段</string>
+    <string name="label_period_name">名称（可选）</string>
+    <string name="hint_period_name">例如：夜间免打扰</string>
+    <string name="label_start_time">开始时间</string>
+    <string name="label_end_time">结束时间</string>
+    <string name="section_options">选项</string>
+    <string name="label_repeat_daily">每天重复</string>
+    <string name="section_import_export">导入 / 导出</string>
+
+    <!-- About -->
+    <string name="screen_about">关于</string>
+    <string name="app_subtitle">音律触感 · LSPosed 模块</string>
+    <string name="app_description">从系统全局音频流中捕捉音乐节奏并触发振动，让马达随着音律而舞动，支持按应用作用域控制。</string>
+    <string name="section_author">作者</string>
+    <string name="section_contributors">贡献者</string>
+    <string name="section_contact">联系方式</string>
+    <string name="label_blog">博客</string>
+    <string name="label_coolapk">酷安</string>
+    <string name="label_github">开源地址</string>
+    <string name="label_check_update">检查更新</string>
+    <string name="label_check_update_desc">点击查看是否有新版本</string>
+    <string name="label_contributions">%d 次贡献</string>
+    <string name="label_developer">开发者 · %s</string>
+    <string name="label_developer_only">开发者</string>
+    <string name="content_app_icon">软件图标</string>
+    <string name="content_avatar">作者头像</string>
+
+    <!-- Update -->
+    <string name="screen_update">检查更新</string>
+    <string name="update_checking">正在检查更新…</string>
+    <string name="update_failed">检查失败，请检查网络后重试</string>
+    <string name="update_available">发现新版本 v%s</string>
+    <string name="update_current">当前版本 v%s</string>
+    <string name="section_changelog">更新日志</string>
+    <string name="action_download_browser">前往浏览器下载</string>
+    <string name="update_up_to_date">当前已是最新版本 v%s</string>
+
+    <!-- Toast messages -->
+    <string name="toast_browser_error">无法打开浏览器</string>
+    <string name="toast_open_link_error">无法打开链接</string>
+    <string name="toast_exported_single">已导出 %s.json</string>
+    <string name="toast_export_failed">导出失败</string>
+    <string name="toast_exported_batch">已导出配置包 zip</string>
+    <string name="toast_imported_count">导入成功 %d 个配置</string>
+    <string name="toast_import_none">未找到可导入的配置</string>
+    <string name="toast_no_custom_profiles">没有可导出的自定义配置</string>
+    <string name="toast_export_scope">已导出作用域配置</string>
+    <string name="toast_read_file_failed">读取文件失败</string>
+    <string name="toast_import_scope">已导入作用域配置</string>
+    <string name="toast_import_scope_failed">导入失败：无效的配置文件</string>
+    <string name="label_expand_bands">频段设置 ▼ · </string>
+    <string name="label_band_range">范围 #%1$d(%2$s) - #%3$d(%4$s)</string>
+    <string name="label_auto">自动</string>
+    <string name="setting_language">语言</string>
+    <string name="language_system">跟随系统</string>
 </resources>

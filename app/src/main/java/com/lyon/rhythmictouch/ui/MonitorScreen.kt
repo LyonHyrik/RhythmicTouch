@@ -37,16 +37,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.content.Intent
 import androidx.compose.ui.graphics.vector.ImageVector
 import kotlin.math.pow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.lyon.rhythmictouch.BuildConfig
 import com.lyon.rhythmictouch.LiveState
+import com.lyon.rhythmictouch.R
 import com.lyon.rhythmictouch.RhythmicConstants
 import com.lyon.rhythmictouch.systemui.SpectrumBand
 import top.yukonga.miuix.kmp.basic.Card
@@ -89,7 +93,7 @@ fun MonitorScreen(
             if (hookVersionMismatch) {
                 HookVersionBanner()
             }
-            SmallTitle("音频检测")
+            SmallTitle(stringResource(R.string.section_audio_detection))
 
             Card(
                 modifier = Modifier
@@ -113,7 +117,7 @@ private fun LiveIndicator() {
     var blocked by remember { mutableStateOf(false) }
     var activeApp by remember { mutableStateOf<String?>(null) }
     var engineActive by remember { mutableStateOf(false) }
-    var vibrationMode by remember { mutableStateOf("安静") }
+    var vibrationMode by remember { mutableStateOf("") }
     val defaultBands = defaultBandsCache
 
     LaunchedEffect(Unit) {
@@ -150,9 +154,9 @@ private fun LiveIndicator() {
         ) {
             Text(
                 text = when {
-                    !engineActive -> "模块未运行"
-                    blocked -> "已屏蔽振动"
-                    else -> "检测中（${bands.size} 频段）"
+                    !engineActive -> stringResource(R.string.status_module_not_running)
+                    blocked -> stringResource(R.string.status_vibration_blocked)
+                    else -> stringResource(R.string.status_detecting, bands.size)
                 },
                 color = when {
                     !engineActive -> MiuixTheme.colorScheme.onBackgroundVariant
@@ -167,12 +171,12 @@ private fun LiveIndicator() {
                 text = if (bands.isNotEmpty()) {
                     val topBand = bands.maxByOrNull { it.value }
                     if (topBand != null && topBand.value > 0.1f) {
-                        "峰值：#${topBand.index} [${topBand.freqStart.toInt()}-${topBand.freqEnd.toInt()}Hz]"
+                        stringResource(R.string.label_peak, topBand.index, topBand.freqStart.toInt(), topBand.freqEnd.toInt())
                     } else {
-                        "安静"
+                        stringResource(R.string.mode_quiet)
                     }
                 } else {
-                    "无数据"
+                    stringResource(R.string.label_no_data)
                 },
                 color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                 maxLines = 1,
@@ -198,7 +202,7 @@ private fun LiveIndicator() {
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = "活跃频段",
+            text = stringResource(R.string.section_active_bands),
             color = MiuixTheme.colorScheme.onSurfaceContainer,
             fontSize = 13.sp,
         )
@@ -217,7 +221,7 @@ private fun LiveIndicator() {
         ) {
             if (activeBands.isEmpty()) {
                 Text(
-                    text = "无",
+                    text = stringResource(R.string.label_none),
                     color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                     fontSize = 12.sp,
                 )
@@ -261,7 +265,7 @@ private fun LiveIndicator() {
 
         val appLabel = appLabel(activeApp)
         Text(
-            text = if (appLabel != null) "当前播放: $appLabel" else "当前无应用在播放",
+            text = if (appLabel != null) stringResource(R.string.label_now_playing, appLabel) else stringResource(R.string.label_no_app_playing),
             color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
         )
     }
@@ -282,19 +286,19 @@ private fun VibrationModePanel(
     modifier: Modifier = Modifier,
 ) {
     val vibrationModes = listOf(
-        ModeItem("💥", MiuixIcons.Music, "重长振", "强低音节拍", "heavyLong"),
-        ModeItem("💢", MiuixIcons.Play, "重短振", "中频重击", "heavyShort"),
-        ModeItem("⚡", MiuixIcons.Timer, "中等击打", "普通节拍", "mediumHit"),
-        ModeItem("🔊", MiuixIcons.VolumeUp, "长脉动", "持续低频", "longPulse"),
-        ModeItem("🎵", MiuixIcons.RecordingTape, "中敲击", "中频突出", "midTap"),
-        ModeItem("🎶", MiuixIcons.Alarm, "上升轻击", "音符起始", "risingTap"),
-        ModeItem("✨", MiuixIcons.Tune, "柔和细节", "轻微细节", "softTick"),
-        ModeItem("😴", MiuixIcons.VolumeOff, "安静", "无振动", null),
+        ModeItem("💥", MiuixIcons.Music, stringResource(R.string.mode_heavy_long), stringResource(R.string.mode_heavy_long_desc), "heavyLong"),
+        ModeItem("💢", MiuixIcons.Play, stringResource(R.string.mode_heavy_short), stringResource(R.string.mode_heavy_short_desc), "heavyShort"),
+        ModeItem("⚡", MiuixIcons.Timer, stringResource(R.string.mode_medium_hit), stringResource(R.string.mode_medium_hit_desc), "mediumHit"),
+        ModeItem("🔊", MiuixIcons.VolumeUp, stringResource(R.string.mode_long_pulse), stringResource(R.string.mode_long_pulse_desc), "longPulse"),
+        ModeItem("🎵", MiuixIcons.RecordingTape, stringResource(R.string.mode_mid_tap), stringResource(R.string.mode_mid_tap_desc), "midTap"),
+        ModeItem("🎶", MiuixIcons.Alarm, stringResource(R.string.mode_rising_tap), stringResource(R.string.mode_rising_tap_desc), "risingTap"),
+        ModeItem("✨", MiuixIcons.Tune, stringResource(R.string.mode_soft_tick), stringResource(R.string.mode_soft_tick_desc), "softTick"),
+        ModeItem("😴", MiuixIcons.VolumeOff, stringResource(R.string.mode_quiet_title), stringResource(R.string.mode_quiet_desc), null),
     )
 
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "振动模式监控",
+            text = stringResource(R.string.section_vibration_mode_monitor),
             color = MiuixTheme.colorScheme.onSurfaceContainer,
             fontSize = 13.sp,
         )
@@ -549,6 +553,9 @@ private val defaultBandsCache: List<SpectrumBand> by lazy {
 @Composable
 private fun HookVersionBanner() {
     val context = LocalContext.current
+    var isRestarting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -569,26 +576,37 @@ private fun HookVersionBanner() {
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "模块版本不一致",
+                    text = stringResource(R.string.hook_version_mismatch),
                     color = MiuixTheme.colorScheme.onSurface,
                     fontSize = 14.sp,
                 )
                 Text(
-                    text = "请重启 SystemUI 使更新生效",
+                    text = if (isRestarting) stringResource(R.string.hook_restart_hint_restarting) else stringResource(R.string.hook_restart_hint),
                     color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                     fontSize = 12.sp,
                 )
             }
             Icon(
                 imageVector = MiuixIcons.Refresh,
-                contentDescription = "重启 SystemUI",
-                tint = MiuixTheme.colorScheme.primary,
+                contentDescription = stringResource(R.string.action_restart_systemui),
+                tint = if (isRestarting) MiuixTheme.colorScheme.onSurfaceContainerVariant else MiuixTheme.colorScheme.primary,
                 modifier = Modifier
                     .size(24.dp)
-                    .clickable {
-                        try {
-                            Runtime.getRuntime().exec(arrayOf("su", "-c", "am force-stop com.android.systemui"))
-                        } catch (_: Throwable) {}
+                    .clickable(enabled = !isRestarting) {
+                        isRestarting = true
+                        scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "am crash com.android.systemui"))
+                                    process.waitFor()
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            } finally {
+                                delay(2000)
+                                isRestarting = false
+                            }
+                        }
                     },
             )
         }

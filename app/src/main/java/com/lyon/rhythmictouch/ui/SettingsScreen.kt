@@ -37,8 +37,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.lyon.rhythmictouch.R
 import com.lyon.rhythmictouch.RhythmicConstants
 import com.lyon.rhythmictouch.config.ConfigStore
+import com.lyon.rhythmictouch.config.LocaleHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -63,8 +66,12 @@ fun SettingsScreen(
     val config = remember { mutableStateOf(store.read()) }
     var isRestarting by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
+    var showQuietPeriods by remember { mutableStateOf(false) }
     var syncedInterval by remember { mutableStateOf<Int?>(null) }
     var vibratorCalMinMs by remember { mutableStateOf(50L) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    var currentLanguage by remember { mutableStateOf(LocaleHelper.getSavedLanguage(context)) }
+    val activity = LocalContext.current as? android.app.Activity
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -151,6 +158,14 @@ fun SettingsScreen(
         return
     }
 
+    if (showQuietPeriods) {
+        QuietPeriodScreen(
+            store = store,
+            onBack = { showQuietPeriods = false },
+        )
+        return
+    }
+
     suspend fun restartSystemUI() {
         isRestarting = true
         try {
@@ -168,7 +183,7 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            SmallTopAppBar(title = "设置")
+            SmallTopAppBar(title = stringResource(R.string.screen_settings))
         },
         bottomBar = bottomBar,
     ) { padding ->
@@ -185,8 +200,8 @@ fun SettingsScreen(
                     store.write(config.value)
                     context.sendBroadcast(Intent(RhythmicConstants.ACTION_REFRESH_CONFIG))
                 },
-                title = "音律触感",
-                summary = "从系统全局音频流中捕捉音乐节奏并触发振动，可能增加功耗与系统占用",
+                title = stringResource(R.string.setting_rhythmic_touch),
+                summary = stringResource(R.string.setting_rhythmic_touch_desc),
             )
 
             SuperSwitch(
@@ -196,11 +211,11 @@ fun SettingsScreen(
                     store.write(config.value)
                     context.sendBroadcast(Intent(RhythmicConstants.ACTION_REFRESH_CONFIG))
                 },
-                title = "作用域白名单模式",
+                title = stringResource(R.string.setting_whitelist_mode),
                 summary = if (config.value.whitelistMode) {
-                    "白名单：仅作用域中的应用触发振动"
+                    stringResource(R.string.setting_whitelist_on)
                 } else {
-                    "黑名单：作用域中的应用不触发振动"
+                    stringResource(R.string.setting_whitelist_off)
                 },
             )
 
@@ -211,8 +226,8 @@ fun SettingsScreen(
                     store.write(config.value)
                     onMonetChange(checked)
                 },
-                title = "全局莫奈取色",
-                summary = "使用系统 Material You 动态取色",
+                title = stringResource(R.string.setting_monet),
+                summary = stringResource(R.string.setting_monet_desc),
             )
 
             Card(
@@ -229,7 +244,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "振动强度",
+                            text = stringResource(R.string.setting_vibration_intensity),
                             color = MiuixTheme.colorScheme.onSurfaceContainer,
                         )
                         Text(
@@ -265,7 +280,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "振动延迟",
+                            text = stringResource(R.string.setting_vibration_delay),
                             color = MiuixTheme.colorScheme.onSurfaceContainer,
                         )
                         Text(
@@ -274,7 +289,7 @@ fun SettingsScreen(
                         )
                     }
                     Text(
-                        text = "调整跟随振动的延迟，部分蓝牙耳机有延迟时可设置以对齐节拍",
+                        text = stringResource(R.string.setting_delay_desc),
                         color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         fontSize = 12.sp,
                     )
@@ -306,18 +321,18 @@ fun SettingsScreen(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            text = "设备振动设置",
+                            text = stringResource(R.string.setting_device_config),
                             color = MiuixTheme.colorScheme.onSurfaceContainer,
                         )
                         Text(
-                            text = "为不同设备单独设置振动强度和延迟",
+                            text = stringResource(R.string.setting_device_config_desc),
                             color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         )
                     }
                 }
             }
 
-            SmallTitle("音频同步")
+            SmallTitle(stringResource(R.string.section_audio_sync))
 
             Card(
                 modifier = Modifier
@@ -333,12 +348,12 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "AAudio 发送间隔",
+                            text = stringResource(R.string.setting_aaudio_interval),
                             color = MiuixTheme.colorScheme.onSurfaceContainer,
                         )
                         Text(
                             text = if (config.value.syncAaudioWithAudioTrack) {
-                                syncedInterval?.let { "${it}ms (自动)" } ?: "等待检测..."
+                                syncedInterval?.let { "${it}ms (${stringResource(R.string.label_auto)})" } ?: stringResource(R.string.label_waiting_detect)
                             } else {
                                 "${config.value.aaudioIntervalMs}ms"
                             },
@@ -347,9 +362,9 @@ fun SettingsScreen(
                     }
                     Text(
                         text = if (config.value.syncAaudioWithAudioTrack) {
-                            "检测 AudioTrack 数据发送速率并实时应用"
+                            stringResource(R.string.setting_sync_auto_desc)
                         } else {
-                            "设置 AAudio 数据的发送间隔（越小响应越快，但功耗越高）"
+                            stringResource(R.string.setting_sync_manual_desc)
                         },
                         color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         fontSize = 12.sp,
@@ -397,11 +412,11 @@ fun SettingsScreen(
                         })
                     }
                 },
-                title = "自动同步 AudioTrack 速率",
-                summary = "自动检测 AudioTrack 数据发送速率并实时应用到 AAudio",
+                title = stringResource(R.string.setting_auto_sync),
+                summary = stringResource(R.string.setting_auto_sync_desc),
             )
 
-            SmallTitle("日志")
+            SmallTitle(stringResource(R.string.section_log))
 
             Card(
                 modifier = Modifier
@@ -412,14 +427,14 @@ fun SettingsScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
                     Text(
-                        text = "日志输出模式",
+                        text = stringResource(R.string.setting_log_mode),
                         color = MiuixTheme.colorScheme.onSurfaceContainer,
                     )
                     Text(
                         text = when (config.value.logMode) {
-                            RhythmicConstants.LOG_MODE_VIBRATE -> "仅在发生振动时输出日志"
-                            RhythmicConstants.LOG_MODE_NONE -> "不输出任何日志"
-                            else -> "输出全部调试日志"
+                            RhythmicConstants.LOG_MODE_VIBRATE -> stringResource(R.string.log_mode_vibrate_desc)
+                            RhythmicConstants.LOG_MODE_NONE -> stringResource(R.string.log_mode_none_desc)
+                            else -> stringResource(R.string.log_mode_all_desc)
                         },
                         color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         fontSize = 12.sp,
@@ -430,9 +445,9 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         val options = listOf(
-                            RhythmicConstants.LOG_MODE_ALL to "全部输出",
-                            RhythmicConstants.LOG_MODE_VIBRATE to "震动时输出",
-                            RhythmicConstants.LOG_MODE_NONE to "不输出",
+                            RhythmicConstants.LOG_MODE_ALL to stringResource(R.string.log_mode_all),
+                            RhythmicConstants.LOG_MODE_VIBRATE to stringResource(R.string.log_mode_vibrate),
+                            RhythmicConstants.LOG_MODE_NONE to stringResource(R.string.log_mode_none),
                         )
                         options.forEach { (mode, label) ->
                             val selected = config.value.logMode == mode
@@ -464,7 +479,32 @@ fun SettingsScreen(
                 }
             }
 
-            SmallTitle("系统")
+            SmallTitle(stringResource(R.string.section_system))
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showLanguageDialog = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.setting_language),
+                            color = MiuixTheme.colorScheme.onSurfaceContainer,
+                        )
+                        Text(
+                            text = LocaleHelper.getLanguageDisplayName(currentLanguage),
+                            color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                        )
+                    }
+                }
+            }
 
             Card(
                 modifier = Modifier
@@ -482,12 +522,38 @@ fun SettingsScreen(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            text = "重启SystemUI",
+                            text = stringResource(R.string.setting_restart_systemui),
                             color = MiuixTheme.colorScheme.onSurfaceContainer,
                         )
                         Text(
-                            text = if (isRestarting) "正在重启 SystemUI..." else "仅在配置不生效时尝试，应用大部分配置都是实时生效的",
+                            text = if (isRestarting) stringResource(R.string.setting_restart_restarting) else stringResource(R.string.setting_restart_desc),
                             color = if (isRestarting) MiuixTheme.colorScheme.primary else MiuixTheme.colorScheme.onSurfaceContainerVariant,
+                        )
+                    }
+                }
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showQuietPeriods = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.setting_quiet_periods),
+                            color = MiuixTheme.colorScheme.onSurfaceContainer,
+                        )
+                        Text(
+                            text = if (config.value.quietPeriods.isEmpty()) stringResource(R.string.quiet_not_set)
+                            else stringResource(R.string.quiet_active_count, config.value.quietPeriods.count { it.enabled }),
+                            color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         )
                     }
                 }
@@ -507,13 +573,74 @@ fun SettingsScreen(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            text = "关于",
+                            text = stringResource(R.string.setting_about),
                             color = MiuixTheme.colorScheme.onSurfaceContainer,
                         )
                         Text(
-                            text = "音律触感",
+                            text = stringResource(R.string.app_name),
                             color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         )
+                    }
+                }
+            }
+        }
+
+        if (showLanguageDialog) {
+            val langs = listOf(
+                LocaleHelper.FOLLOW_SYSTEM to stringResource(R.string.language_system),
+                LocaleHelper.CHINESE to "中文",
+                LocaleHelper.ENGLISH to "English",
+            )
+            top.yukonga.miuix.kmp.basic.Scaffold { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .background(Color.Black.copy(alpha = 0.4f))
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        ) { showLanguageDialog = false },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Card(
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                    ) {
+                        Column(modifier = Modifier.padding(20.dp)) {
+                            Text(
+                                text = stringResource(R.string.setting_language),
+                                color = MiuixTheme.colorScheme.onSurfaceContainer,
+                                fontSize = 17.sp,
+                                modifier = Modifier.padding(bottom = 12.dp),
+                            )
+                            langs.forEach { (key, label) ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            if (currentLanguage == key) MiuixTheme.colorScheme.primaryContainer
+                                            else Color.Transparent,
+                                        )
+                                        .clickable {
+                                            LocaleHelper.saveLanguage(context, key)
+                                            currentLanguage = key
+                                            showLanguageDialog = false
+                                            activity?.recreate()
+                                        }
+                                        .padding(vertical = 12.dp, horizontal = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = if (currentLanguage == key) MiuixTheme.colorScheme.primary
+                                        else MiuixTheme.colorScheme.onSurfaceContainer,
+                                        fontSize = 15.sp,
+                                    )
+                                }
+                                Spacer(Modifier.height(4.dp))
+                            }
+                        }
                     }
                 }
             }

@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.os.SystemClock
 import com.lyon.rhythmictouch.RhythmicConstants
 import com.lyon.rhythmictouch.config.DeviceVibrationConfig
+import com.lyon.rhythmictouch.config.QuietPeriod
 import com.lyon.rhythmictouch.config.RhythmicConfig
 import com.lyon.rhythmictouch.config.VibrationParams
 import com.lyon.rhythmictouch.config.VibrationProfile
@@ -49,9 +50,10 @@ class ConfigBridge(context: Context) {
         deviceConfigs = DeviceVibrationConfig.fromJson(cachePrefs.getString("device_configs_json", null)),
         aaudioIntervalMs = cachePrefs.getInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, RhythmicConstants.DEFAULT_AAUDIO_INTERVAL_MS).coerceIn(33, 300),
         syncAaudioWithAudioTrack = cachePrefs.getBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, RhythmicConstants.DEFAULT_SYNC_AAUDIO_WITH_AUDIOTRACK),
+        quietPeriods = QuietPeriod.fromJsonList(cachePrefs.getString("quiet_periods_json", null)),
     )
 
-    private fun writeCache(config: RhythmicConfig) {
+    fun writeCache(config: RhythmicConfig) {
         try {
             cachePrefs.edit()
                 .putBoolean(RhythmicConstants.KEY_ENABLED, config.enabled)
@@ -67,6 +69,7 @@ class ConfigBridge(context: Context) {
                 .putString("device_configs_json", DeviceVibrationConfig.toJson(config.deviceConfigs))
                 .putInt(RhythmicConstants.KEY_AAUDIO_INTERVAL_MS, config.aaudioIntervalMs)
                 .putBoolean(RhythmicConstants.KEY_SYNC_AAUDIO_WITH_AUDIOTRACK, config.syncAaudioWithAudioTrack)
+                .putString("quiet_periods_json", QuietPeriod.toJsonList(config.quietPeriods))
                 .apply()
         } catch (_: Throwable) {}
     }

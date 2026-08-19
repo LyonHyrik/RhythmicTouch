@@ -23,10 +23,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lyon.rhythmictouch.BuildConfig
+import com.lyon.rhythmictouch.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -142,19 +144,19 @@ fun UpdateScreen(
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             )
         } catch (t: Throwable) {
-            Toast.makeText(context, "无法打开浏览器", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.toast_browser_error), Toast.LENGTH_SHORT).show()
         }
     }
 
     Scaffold(
         topBar = {
             SmallTopAppBar(
-                title = "检查更新",
+                title = stringResource(R.string.screen_update),
                 navigationIcon = {
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = MiuixIcons.Basic.ArrowRight,
-                            contentDescription = "返回",
+                            contentDescription = stringResource(R.string.action_back),
                             modifier = Modifier
                                 .size(24.dp)
                                 .graphicsLayer { scaleX = -1f },
@@ -176,7 +178,7 @@ fun UpdateScreen(
             when {
                 checking -> {
                     Text(
-                        text = "正在检查更新...",
+                        text = stringResource(R.string.update_checking),
                         color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         fontSize = 14.sp,
                     )
@@ -184,7 +186,7 @@ fun UpdateScreen(
 
                 error -> {
                     Text(
-                        text = "检查失败，请检查网络后重试",
+                        text = stringResource(R.string.update_failed),
                         color = MiuixTheme.colorScheme.error,
                         fontSize = 14.sp,
                     )
@@ -192,14 +194,14 @@ fun UpdateScreen(
 
                 hasUpdate && info != null -> {
                     Text(
-                        text = "发现新版本 v${info!!.latestVersion}",
+                        text = stringResource(R.string.update_available, info!!.latestVersion),
                         color = MiuixTheme.colorScheme.primary,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = "当前版本 v${BuildConfig.VERSION_NAME}",
+                        text = stringResource(R.string.update_current, BuildConfig.VERSION_NAME),
                         color = MiuixTheme.colorScheme.onSurfaceContainerVariant,
                         fontSize = 13.sp,
                     )
@@ -213,7 +215,7 @@ fun UpdateScreen(
                         ) {
                             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                                 Text(
-                                    text = "更新日志",
+                                    text = stringResource(R.string.section_changelog),
                                     color = MiuixTheme.colorScheme.onSurfaceContainer,
                                     fontWeight = FontWeight.Medium,
                                 )
@@ -235,13 +237,13 @@ fun UpdateScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 32.dp),
                     ) {
-                        Text("前往浏览器下载", color = androidx.compose.ui.graphics.Color.White)
+                        Text(stringResource(R.string.action_download_browser), color = androidx.compose.ui.graphics.Color.White)
                     }
                 }
 
                 else -> {
                     Text(
-                        text = "当前已是最新版本 v${BuildConfig.VERSION_NAME}",
+                        text = stringResource(R.string.update_up_to_date, BuildConfig.VERSION_NAME),
                         color = MiuixTheme.colorScheme.primary,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
