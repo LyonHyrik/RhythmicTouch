@@ -220,6 +220,17 @@ fun SettingsScreen(
             )
 
             SuperSwitch(
+                checked = config.value.flatDetection,
+                onCheckedChange = { checked ->
+                    config.value = config.value.copy(flatDetection = checked)
+                    store.write(config.value)
+                    context.sendBroadcast(Intent(RhythmicConstants.ACTION_REFRESH_CONFIG))
+                },
+                title = stringResource(R.string.setting_flat_detection),
+                summary = stringResource(R.string.setting_flat_detection_desc),
+            )
+
+            SuperSwitch(
                 checked = config.value.monet,
                 onCheckedChange = { checked ->
                     config.value = config.value.copy(monet = checked)

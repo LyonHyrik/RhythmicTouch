@@ -45,6 +45,9 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
     var effectiveMinIntervalMs = MIN_VIBRATE_INTERVAL_MS
         private set
 
+    @Volatile
+    var flatPaused = false
+
     private val vibrateHandler = Handler(Looper.getMainLooper())
     private val pendingRunnables = mutableSetOf<Runnable>()
 
@@ -235,6 +238,10 @@ class VibratorDriver(private val vibrator: Vibrator?, private val analyzer: Beat
         }
         if (intensity <= 0.05f) {
             RhythmicLog.d(TAG, "❌ EARLY RETURN: intensity too low ($intensity <= 0.05)")
+            return
+        }
+        if (flatPaused) {
+            RhythmicLog.d(TAG, "❌ EARLY RETURN: flat detected, vibration paused")
             return
         }
 
