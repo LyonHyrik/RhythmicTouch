@@ -111,6 +111,8 @@
     <string name="setting_whitelist_mode">作用域白名单模式</string>
     <string name="setting_whitelist_on">白名单：仅作用域中的应用触发振动</string>
     <string name="setting_whitelist_off">黑名单：作用域中的应用不触发振动</string>
+    <string name="setting_flat_detection">平放检测</string>
+    <string name="setting_flat_detection_desc">设备平放时自动暂停振动，拿起后恢复。平放5秒后暂停，拿起2秒后恢复</string>
     <string name="setting_monet">全局莫奈取色</string>
     <string name="setting_monet_desc">使用系统 Material You 动态取色</string>
     <string name="setting_vibration_intensity">振动强度</string>

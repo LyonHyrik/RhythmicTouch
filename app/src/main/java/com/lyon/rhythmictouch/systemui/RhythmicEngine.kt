@@ -26,6 +26,7 @@ class RhythmicEngine(context: Context) {
     private val configBridge = ConfigBridge(appContext)
     private val activeTracker = ActiveAppTracker(appContext)
     private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val flatDetector = FlatDetector(appContext, configBridge)
     private val statusThread = HandlerThread("rhythmic-status").apply { start() }
     private val statusHandler = Handler(statusThread.looper)
 
@@ -72,6 +73,13 @@ class RhythmicEngine(context: Context) {
         log("capturer started, engineActive=${LiveState.engineActive}, samplingRate=${cap.samplingRate}, captureSize=${cap.captureSize}")
         configBridge.refresh(force = true)
         DaemonManager.start(appContext)
+
+        flatDetector.onStateChanged = { paused ->
+            driver.flatPaused = paused
+            log("Flat detector: paused=$paused")
+        }
+        flatDetector.start()
+
         driver.calibrate(appContext) { minMs ->
             try {
                 val bundle = android.os.Bundle().apply { putLong("vibrator_min_ms", minMs) }
@@ -136,6 +144,7 @@ class RhythmicEngine(context: Context) {
         capturer?.stop()
         capturer?.release()
         capturer = null
+        flatDetector.stop()
         driver.stop()
     }
 
@@ -150,7 +159,8 @@ class RhythmicEngine(context: Context) {
         RhythmicLog.mode = config.logMode
         driver.updateParams(config.vibrationParams)
         driver.updateDelayMs(config.vibrationDelay.toLong())
-        log("refreshConfig: active profile params applied, heavyLong=${config.vibrationParams.ampOf(com.lyon.rhythmictouch.config.VibrationParams.KEY_HEAVY_LONG)}%/${config.vibrationParams.durOf(com.lyon.rhythmictouch.config.VibrationParams.KEY_HEAVY_LONG)}ms delay=${config.vibrationDelay}ms")
+        flatDetector.refreshEnabled()
+        log("refreshConfig: active profile params applied, heavyLong=${config.vibrationParams.ampOf(com.lyon.rhythmictouch.config.VibrationParams.KEY_HEAVY_LONG)}%/${config.vibrationParams.durOf(com.lyon.rhythmictouch.config.VibrationParams.KEY_HEAVY_LONG)}ms delay=${config.vibrationDelay}ms flatDetection=${config.flatDetection}")
         return config
     }
 

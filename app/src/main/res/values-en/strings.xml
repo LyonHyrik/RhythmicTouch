@@ -111,6 +111,8 @@
     <string name="setting_whitelist_mode">Scope Whitelist Mode</string>
     <string name="setting_whitelist_on">Whitelist: Only scoped apps trigger vibration</string>
     <string name="setting_whitelist_off">Blacklist: Scoped apps will not trigger vibration</string>
+    <string name="setting_flat_detection">Flat Detection</string>
+    <string name="setting_flat_detection_desc">Auto-pause vibration when device is lying flat, resume when picked up. Pauses after 5s flat, resumes 2s after pick-up</string>
     <string name="setting_monet">Global Monet Theming</string>
     <string name="setting_monet_desc">Use system Material You dynamic colors</string>
     <string name="setting_vibration_intensity">Vibration Intensity</string>

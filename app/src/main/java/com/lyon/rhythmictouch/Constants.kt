@@ -61,6 +61,9 @@ object RhythmicConstants {
     const val KEY_SYNC_AAUDIO_WITH_AUDIOTRACK = "sync_aaudio_with_audiotrack"
     const val DEFAULT_SYNC_AAUDIO_WITH_AUDIOTRACK = true
 
+    const val KEY_FLAT_DETECTION = "flat_detection"
+    const val DEFAULT_FLAT_DETECTION = false
+
     const val ACTION_REQUEST_DETECTED_INTERVAL = "com.lyon.rhythmictouch.ACTION_REQUEST_DETECTED_INTERVAL"
     const val EXTRA_SYNC_ENABLED = "sync_enabled"
 
