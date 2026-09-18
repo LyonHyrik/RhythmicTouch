@@ -1,12 +1,10 @@
 package com.lyon.rhythmictouch.systemui
 
-import android.media.audiofx.BassBoost
 import android.media.audiofx.Visualizer
 
 class AudioCapturer private constructor() {
 
     private var visualizer: Visualizer? = null
-    private var chainEffect: BassBoost? = null
     private var fallbackRecord: android.media.AudioRecord? = null
     private var recordThread: Thread? = null
     @Volatile
@@ -53,7 +51,6 @@ class AudioCapturer private constructor() {
             old?.release()
         } catch (_: Throwable) {
         }
-        releaseChainEffect()
         currentSession = sessionId
         enabled = false
         usingFallbackMode = false
@@ -75,10 +72,6 @@ class AudioCapturer private constructor() {
 
     private fun tryAttachVisualizer(sessionId: Int): Boolean {
         log("🎨 Creating Visualizer for session=$sessionId...")
-        
-        if (sessionId > 0) {
-            setupChainEffect(sessionId)
-        }
         
         val v = try {
             val visualizer = Visualizer(sessionId)
@@ -370,37 +363,6 @@ class AudioCapturer private constructor() {
         }
     }
 
-    private fun setupChainEffect(sessionId: Int) {
-        val effect = try {
-            BassBoost(0, sessionId)
-        } catch (t: Throwable) {
-            log("BassBoost($sessionId) failed: $t")
-            null
-        }
-        if (effect != null) {
-            try {
-                effect.setStrength(0)
-                effect.enabled = true
-            } catch (t: Throwable) {
-                log("BassBoost enable failed: $t")
-            }
-            chainEffect = effect
-            log("chain effect attached to session=$sessionId")
-        }
-    }
-
-    private fun releaseChainEffect() {
-        try {
-            chainEffect?.enabled = false
-        } catch (_: Throwable) {
-        }
-        try {
-            chainEffect?.release()
-        } catch (_: Throwable) {
-        }
-        chainEffect = null
-    }
-
     private fun setListenerOn(visualizer: Visualizer) {
         try {
             visualizer.setDataCaptureListener(
@@ -446,7 +408,6 @@ class AudioCapturer private constructor() {
         } catch (_: Throwable) {
         }
         visualizer = null
-        releaseChainEffect()
         usingFallbackMode = false
         currentSession = Int.MIN_VALUE
     }
