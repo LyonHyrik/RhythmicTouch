@@ -21,6 +21,16 @@ class ActiveAppTracker(context: Context) {
     var activeSessions: List<Int> = emptyList()
         private set
 
+    /**
+     * Sessions whose playback state is 'started'. An app commonly registers two players at
+     * once: a MediaPlayer that stays idle plus the AudioTrack that actually renders audio.
+     * The Visualizer only emits samples when attached to a started one, so choosing by list
+     * order can silently capture silence.
+     */
+    @Volatile
+    var activeStartedSessions: List<Int> = emptyList()
+        private set
+
     @Volatile
     var daemonUids: Set<Int> = emptySet()
 
@@ -72,6 +82,7 @@ class ActiveAppTracker(context: Context) {
         lastRefreshMs = nowMs
         val uids = mutableListOf<Int>()
         val sessions = mutableListOf<Int>()
+        val startedSessions = mutableListOf<Int>()
         var detectedAAudio = false
         
         try {
@@ -123,8 +134,9 @@ class ActiveAppTracker(context: Context) {
                 } else if (session > 0) {
                     uids += uid
                     sessions += session
+                    if (state == "started") startedSessions += session
                     pkgName?.let { rememberSessionPkg(session, it) }
-                    log("✅ Active session: $session for $pkgName (uid=$uid)")
+                    log("✅ Active session: $session for $pkgName (uid=$uid, state=$state)")
                 } else {
                     log("⏭️ Skipped: session=$session (not > 0 and not AAudio)")
                 }
@@ -134,7 +146,7 @@ class ActiveAppTracker(context: Context) {
             
             if (uids.isNotEmpty()) {
                 if (uids != activeUids || sessions != activeSessions || detectedAAudio != hasAAudioApps) {
-                    log("📋 Session list updated -> uids=$uids sessions=$sessions pkgs=${uids.map { packageForUid(it) }} aAudio=$detectedAAudio")
+                    log("📋 Session list updated -> uids=$uids sessions=$sessions started=$startedSessions pkgs=${uids.map { packageForUid(it) }} aAudio=$detectedAAudio")
                 }
             } else {
                 if (activeUids.isNotEmpty()) {
@@ -147,6 +159,7 @@ class ActiveAppTracker(context: Context) {
         }
         activeUids = uids
         activeSessions = sessions
+        activeStartedSessions = startedSessions.toList()
     }
 
     fun primarySessionId(): Int {
@@ -169,11 +182,16 @@ class ActiveAppTracker(context: Context) {
             return -9999
         }
         
-        // Priority 2: Return first normal session
-        val sessionId = activeSessions.firstOrNull() ?: 0
+        // Priority 2: Prefer a session that is actually rendering audio. Apps often register a
+        // pair of players (an idle MediaPlayer plus the live AudioTrack) and list order
+        // puts the idle one first; the Visualizer yields an all-zero FFT for those, which
+        // previously left level stuck at 0.00 with no visible error.
+        val sessionId = activeStartedSessions.firstOrNull()
+            ?: activeSessions.firstOrNull()
+            ?: 0
         if (sessionId > 0) {
-            val pkg = packageForUid(activeUids.firstOrNull() ?: 0)
-            log("🎯 primarySessionId()=$sessionId for package=$pkg")
+            val pkg = packageForSession(sessionId) ?: packageForUid(activeUids.firstOrNull() ?: 0)
+            log("🎯 primarySessionId()=$sessionId for package=$pkg (started=${activeStartedSessions})")
         }
         return sessionId
     }
