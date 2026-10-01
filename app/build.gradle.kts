@@ -12,8 +12,8 @@ android {
         applicationId = "com.lyon.rhythmictouch"
         minSdk = 28
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.0.5"
+        versionCode = 7
+        versionName = "1.0.6"
     }
 
     buildFeatures {
@@ -86,7 +86,6 @@ android {
 dependencies {
     compileOnly("de.robv.android.xposed:api:82")
 
-    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
     implementation("top.yukonga.miuix.kmp:miuix-android:0.8.8")
     implementation("top.yukonga.miuix.kmp:miuix-icons:0.8.8")
     implementation("androidx.core:core-ktx:1.15.0")

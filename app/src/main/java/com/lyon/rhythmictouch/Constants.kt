@@ -42,6 +42,7 @@ object RhythmicConstants {
     const val EXTRA_VIBRATION_MODE = "vibration_mode"
     const val EXTRA_TEST_MODE_KEY = "test_mode_key"
     const val EXTRA_AAUDIO_INTERVAL_MS = "aaudio_interval_ms"
+    const val EXTRA_ENGINE_ALIVE = "engine_alive"
 
     const val KEY_MODULE_VERSION = "module_version_code"
     const val METHOD_SET_MODULE_VERSION = "set_module_version"

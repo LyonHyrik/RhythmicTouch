@@ -119,6 +119,7 @@ private fun LiveIndicator() {
     var blocked by remember { mutableStateOf(false) }
     var activeApp by remember { mutableStateOf<String?>(null) }
     var engineActive by remember { mutableStateOf(false) }
+    var engineAlive by remember { mutableStateOf(false) }
     var vibrationMode by remember { mutableStateOf("") }
     var lastBands by remember { mutableStateOf(emptyList<SpectrumBand>()) }
     val defaultBands = defaultBandsCache
@@ -140,6 +141,10 @@ private fun LiveIndicator() {
             if (newActiveApp != activeApp) activeApp = newActiveApp
             val newEngineActive = LiveState.engineActive && LiveState.isFresh()
             if (newEngineActive != engineActive) engineActive = newEngineActive
+            // Engine heartbeat is independent of audio capture: the module is loaded even when
+            // nothing is playing (AudioRecord fallback is off, so idle yields no FFT frames).
+            val newEngineAlive = LiveState.engineActive && LiveState.isEngineAlive()
+            if (newEngineAlive != engineAlive) engineAlive = newEngineAlive
             val newMode = LiveState.vibrationMode
             if (newMode != vibrationMode) vibrationMode = newMode
             kotlinx.coroutines.delay(80)
@@ -158,12 +163,13 @@ private fun LiveIndicator() {
         ) {
             Text(
                 text = when {
-                    !engineActive -> stringResource(R.string.status_module_not_running)
+                    !engineAlive -> stringResource(R.string.status_module_not_running)
                     blocked -> stringResource(R.string.status_vibration_blocked)
+                    !engineActive -> stringResource(R.string.status_loaded_idle)
                     else -> stringResource(R.string.status_detecting, bands.size)
                 },
                 color = when {
-                    !engineActive -> MiuixTheme.colorScheme.onBackgroundVariant
+                    !engineAlive -> MiuixTheme.colorScheme.onBackgroundVariant
                     blocked -> MiuixTheme.colorScheme.error
                     else -> MiuixTheme.colorScheme.onSurface
                 },

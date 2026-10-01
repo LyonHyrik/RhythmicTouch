@@ -25,6 +25,7 @@
     <string name="status_module_not_running">模块未运行</string>
     <string name="status_vibration_blocked">已屏蔽振动</string>
     <string name="status_detecting">检测中（%d 频段）</string>
+    <string name="status_loaded_idle">模块已加载 · 待机中</string>
     <string name="label_peak">峰值：#%1$d [%2$d-%3$dHz]</string>
     <string name="label_no_data">无数据</string>
     <string name="section_active_bands">活跃频段</string>

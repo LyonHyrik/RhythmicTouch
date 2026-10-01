@@ -6,6 +6,9 @@ import com.lyon.rhythmictouch.systemui.SpectrumBand
 object LiveState {
     @Volatile var observing: Boolean = false
     @Volatile var engineActive: Boolean = false
+    /** Engine heartbeat: refreshed by a timer in SystemUI, independent of audio capture.
+     *  Lets the UI show "module loaded" while idle, when no FFT data is flowing. */
+    @Volatile private var engineHeartbeatMs: Long = 0L
     @Volatile var level: Float = 0f
     @Volatile var bass: Float = 0f
     @Volatile var mid: Float = 0f
@@ -22,6 +25,14 @@ object LiveState {
         lastUpdateMs = SystemClock.elapsedRealtime()
     }
 
+    fun markEngineAlive() {
+        engineHeartbeatMs = SystemClock.elapsedRealtime()
+    }
+
     fun isFresh(withinMs: Long = 3000L): Boolean =
         SystemClock.elapsedRealtime() - lastUpdateMs < withinMs
+
+    /** True when the SystemUI engine heartbeat arrived recently, even with no audio data. */
+    fun isEngineAlive(withinMs: Long = 5000L): Boolean =
+        SystemClock.elapsedRealtime() - engineHeartbeatMs < withinMs
 }

@@ -15,6 +15,10 @@ class LiveStatusReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
         if (intent?.action != RhythmicConstants.ACTION_LIVE_STATUS) return
         LiveState.engineActive = intent.getBooleanExtra(RhythmicConstants.EXTRA_ACTIVE, LiveState.engineActive)
+        if (intent.getBooleanExtra(RhythmicConstants.EXTRA_ENGINE_ALIVE, false)) {
+            // Heartbeat: engine is loaded even though no FFT frame is attached (idle, no playback).
+            LiveState.markEngineAlive()
+        }
         LiveState.level = intent.getFloatExtra(RhythmicConstants.EXTRA_LEVEL, 0f)
         LiveState.bass = intent.getFloatExtra(RhythmicConstants.EXTRA_BASS, 0f)
         LiveState.mid = intent.getFloatExtra(RhythmicConstants.EXTRA_MID, 0f)
