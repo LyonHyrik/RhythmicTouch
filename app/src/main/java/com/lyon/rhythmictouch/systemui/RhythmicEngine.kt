@@ -63,14 +63,22 @@ class RhythmicEngine(context: Context) {
     @Volatile
     private var detectedGlobalIntervalMs = 100L
 
+    @Volatile
+    private var lastHeartbeatMs = 0L
+
     fun start() {
         log("engine.start()")
         stop()
         val cap = AudioCapturer.create()
         capturer = cap
         cap.setFftListener(::onFftData)
-        LiveState.engineActive = cap.startDefault()
-        log("capturer started, engineActive=${LiveState.engineActive}, samplingRate=${cap.samplingRate}, captureSize=${cap.captureSize}")
+        // Capture may legitimately fail while idle (Visualizer has no session to attach to and
+        // the AudioRecord fallback is disabled to protect BT routing). That must NOT be reported
+        // as "module not running" — the engine is loaded and will attach as soon as playback
+        // starts. engineActive tracks module/engine liveness, not current audio availability.
+        val captureStarted = cap.startDefault()
+        LiveState.engineActive = true
+        log("capturer startDefault=$captureStarted (idle is OK), engineActive=true, samplingRate=${cap.samplingRate}, captureSize=${cap.captureSize}")
         configBridge.refresh(force = true)
         DaemonManager.start(appContext)
 
@@ -134,9 +142,43 @@ class RhythmicEngine(context: Context) {
                 if (!phiraActive) {
                     e.getFftSnapshot()?.let { onFftData(it, e.samplingRate) }
                 }
+                broadcastHeartbeat()
                 statusHandler.postDelayed(this, SESSION_WATCH_MS)
             }
         })
+    }
+
+    /**
+     * Keeps the app-side "module loaded" indicator alive while no audio is flowing.
+     * The AudioRecord fallback is disabled (it hijacks the BT output route), so while idle
+     * there are no FFT frames and therefore no ACTION_LIVE_STATUS broadcasts at all. Without
+     * this heartbeat the UI would report "module not running" simply because nothing is playing.
+     */
+    private fun broadcastHeartbeat() {
+        val now = SystemClock.elapsedRealtime()
+        if (!observing) return
+        if (now - lastHeartbeatMs < HEARTBEAT_INTERVAL_MS) return
+        lastHeartbeatMs = now
+        LiveState.markEngineAlive()
+        statusHandler.post {
+            try {
+                val intent = Intent(RhythmicConstants.ACTION_LIVE_STATUS).apply {
+                    setPackage(RhythmicConstants.MODULE_PACKAGE)
+                    putExtra(RhythmicConstants.EXTRA_ACTIVE, true)
+                    putExtra(RhythmicConstants.EXTRA_ENGINE_ALIVE, true)
+                    putExtra(RhythmicConstants.EXTRA_LEVEL, LiveState.level)
+                    putExtra(RhythmicConstants.EXTRA_BASS, LiveState.bass)
+                    putExtra(RhythmicConstants.EXTRA_MID, LiveState.mid)
+                    putExtra(RhythmicConstants.EXTRA_TREBLE, LiveState.treble)
+                    putExtra(RhythmicConstants.EXTRA_BEAT, LiveState.beat)
+                    putExtra(RhythmicConstants.EXTRA_BLOCKED, LiveState.blocked)
+                    putExtra(RhythmicConstants.EXTRA_VIBRATION_MODE, driver.currentMode)
+                }
+                appContext.sendBroadcast(intent)
+            } catch (t: Throwable) {
+                log("heartbeat broadcast failed: $t")
+            }
+        }
     }
 
     fun stop() {
@@ -250,7 +292,10 @@ class RhythmicEngine(context: Context) {
         val config = configBridge.refresh()
         RhythmicLog.mode = config.logMode
 
-        val foregroundApp = activeTracker.primaryApp()
+        // Prefer the identity of the session we are actually capturing: primaryApp() reads the
+        // momentary active-playback snapshot, which lags the first audible frame.
+        val foregroundApp = activeTracker.packageForSession(attachedSession)
+            ?: activeTracker.primaryApp()
         val matchedProfile = if (foregroundApp != null) {
             config.profiles.firstOrNull { it.scopeApps.isNotEmpty() && foregroundApp in it.scopeApps }
         } else null
@@ -264,7 +309,9 @@ class RhythmicEngine(context: Context) {
         val effectiveIntensity = deviceOverride?.first ?: config.intensity
         val effectiveDelay = deviceOverride?.second ?: config.vibrationDelay
         driver.updateDelayMs(effectiveDelay.toLong())
-        val blocked = !config.enabled || activeTracker.isBlocked(config.whitelistMode, effectiveScopeApps) || config.quietPeriods.any { it.isActiveNow() }
+        val blocked = !config.enabled ||
+            activeTracker.isBlocked(config.whitelistMode, effectiveScopeApps, attachedSession) ||
+            config.quietPeriods.any { it.isActiveNow() }
 
         val triggeredToday = config.quietPeriods.filter { !it.repeatDaily && it.isActiveNow() && it.lastTriggeredDate != todayString() }
         if (triggeredToday.isNotEmpty()) {
@@ -341,6 +388,7 @@ class RhythmicEngine(context: Context) {
 
     private companion object {
         const val STATUS_INTERVAL_MS = 100L
+        const val HEARTBEAT_INTERVAL_MS = 1000L
         const val PROBE_INTERVAL_MS = 5000L
         const val SESSION_WATCH_MS = 100L
         const val ATTACH_RETRY_MS = 2000L

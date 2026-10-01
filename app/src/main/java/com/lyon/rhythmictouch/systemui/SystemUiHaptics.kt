@@ -41,14 +41,6 @@ object SystemUiHaptics {
         val ctx = context.applicationContext ?: context
         log("start(context=${ctx.packageName}, uid=${ctx.applicationInfo?.uid})")
 
-        // Initialize RichTap before engine (priority haptic backend)
-        try {
-            RichTapHelper.init(ctx)
-            log("RichTap init: supported=${RichTapHelper.isAvailable()}")
-        } catch (t: Throwable) {
-            log("RichTap init failed: ${t.message}")
-        }
-
         val e = RhythmicEngine(ctx)
         log("engine created, starting...")
         e.start()
