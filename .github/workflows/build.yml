@@ -20,8 +20,22 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
+      - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+
+      # The legacy 'tools' package no longer exists in cmdline-tools 16+, which makes
+      # setup-android's internal sdkmanager call fail on newer runner images. Install the
+      # components the build actually needs explicitly and accept licenses up front.
+      - name: Install SDK components
+        run: |
+          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;35.0.0" || \
+          sdkmanager --install "platform-tools" "platforms;android-36"
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+
+      # CMakeLists.txt uses FetchContent to pull the Dobby source at configure time.
+      - name: Ensure git is available
+        run: |
+          git --version
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -49,6 +63,12 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Install SDK components
+        run: |
+          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;35.0.0" || \
+          sdkmanager --install "platform-tools" "platforms;android-36"
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
 
       - name: Decode Keystore
         env:
@@ -89,6 +109,12 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Install SDK components
+        run: |
+          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;35.0.0" || \
+          sdkmanager --install "platform-tools" "platforms;android-36"
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
 
       - name: Decode Keystore
         env:
