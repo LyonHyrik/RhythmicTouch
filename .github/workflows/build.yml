@@ -20,17 +20,23 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      # NOTE: android-actions/setup-android@v3 is intentionally not used. It fails hard
+      # on current runner images because it still installs the legacy 'tools' package,
+      # which was removed in cmdline-tools 16+ ("Failed to find package 'tools'"). Hosted
+      # runners already ship an Android SDK, so install only what this build needs.
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      # The legacy 'tools' package no longer exists in cmdline-tools 16+, which makes
-      # setup-android's internal sdkmanager call fail on newer runner images. Install the
-      # components the build actually needs explicitly and accept licenses up front.
-      - name: Install SDK components
         run: |
-          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;35.0.0" || \
-          sdkmanager --install "platform-tools" "platforms;android-36"
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "SDK_ROOT=$SDK_ROOT"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f 2>/dev/null | sort | tail -1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found under $SDK_ROOT/cmdline-tools" >&2
+            exit 1
+          fi
+          chmod +x "$SDKMANAGER" || true
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-36" || true
+          "$SDKMANAGER" --install "ndk;28.2.13676358" "cmake;3.22.1" || true
 
       # CMakeLists.txt uses FetchContent to pull the Dobby source at configure time.
       - name: Ensure git is available
@@ -61,14 +67,23 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install SDK components
+      # NOTE: android-actions/setup-android@v3 is intentionally not used. It fails hard
+      # on current runner images because it still installs the legacy 'tools' package,
+      # which was removed in cmdline-tools 16+ ("Failed to find package 'tools'"). Hosted
+      # runners already ship an Android SDK, so install only what this build needs.
+      - name: Set up Android SDK
         run: |
-          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;35.0.0" || \
-          sdkmanager --install "platform-tools" "platforms;android-36"
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "SDK_ROOT=$SDK_ROOT"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f 2>/dev/null | sort | tail -1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found under $SDK_ROOT/cmdline-tools" >&2
+            exit 1
+          fi
+          chmod +x "$SDKMANAGER" || true
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-36" || true
+          "$SDKMANAGER" --install "ndk;28.2.13676358" "cmake;3.22.1" || true
 
       - name: Decode Keystore
         env:
@@ -107,14 +122,23 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install SDK components
+      # NOTE: android-actions/setup-android@v3 is intentionally not used. It fails hard
+      # on current runner images because it still installs the legacy 'tools' package,
+      # which was removed in cmdline-tools 16+ ("Failed to find package 'tools'"). Hosted
+      # runners already ship an Android SDK, so install only what this build needs.
+      - name: Set up Android SDK
         run: |
-          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;35.0.0" || \
-          sdkmanager --install "platform-tools" "platforms;android-36"
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "SDK_ROOT=$SDK_ROOT"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f 2>/dev/null | sort | tail -1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found under $SDK_ROOT/cmdline-tools" >&2
+            exit 1
+          fi
+          chmod +x "$SDKMANAGER" || true
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-36" || true
+          "$SDKMANAGER" --install "ndk;28.2.13676358" "cmake;3.22.1" || true
 
       - name: Decode Keystore
         env:
